@@ -16,11 +16,14 @@ At the moment the following response time metrics can be exported per transactio
 - (99th) percentile (configurable [0-100])
 
 ### How to use?
-Compiled executable can be run with or without command line options:
+Standalone, manually or included in a pipeline. For example: [LoadRunner integration in Jenkins](https://wiki.jenkins-ci.org/display/JENKINS/HP+Application+Automation+Tools)   
+
+Compiled executable can be run with (pipeline) or without command line options (manually/interactive):
 ```
 LR2Graphite.exe <path to LR mdb> <Graphite host> <Graphite port>
 ```
 
 ### Prerequisites
-OS: Windows  
+Analysed LoadRunner testrun with an MDB file. Not OUTPUT.MDB  
+OS: Windows
 AutoIt for editing code and debugging.  
