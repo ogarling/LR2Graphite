@@ -7,27 +7,23 @@
 	LoadRunner response time metrics export to Graphite
 
 #ce ----------------------------------------------------------------------------
-
-#AutoIt3Wrapper_icon=targets-io.ico
+#AutoIt3Wrapper_Icon=targets-io.ico
 #include "ADO.au3"
 #include <Array.au3>
-;~ #include <MsgBoxConstants.au3>
-;~ #include <AutoItConstants.au3>
-;~ #include <FileConstants.au3>
 
-
-If $CmdLine[0] = 3 Then
+If $CmdLine[0] = 4 Then
 	$sMDB_FileFullPath = $CmdLine[1]
 	$sGraphiteHost = $CmdLine[2]
 	$nGraphitePort = $CmdLine[3]
+	$nTimeZoneOffset = $CmdLine[4]
 Else
 	ConsoleWrite("Please specify following mandatory command line options: LR2Graphite <path to LR mdb> <Graphite host> <Graphite port>" & @CRLF)
-;~ 	$sMDB_FileFullPath = "lt.mdb"
 	$sMDB_FileFullPath = FileOpenDialog("Location of LoadRunner mdb database file?", "", "LoadRunner analysis (*.mdb)")
 	If $sMDB_FileFullPath = "" Or @error Then
 		MsgBox(16, "Error", "No valid location for LoadRunner mdb databbase file specified.")
 		Exit
 	EndIf
+;~ 	If StringRight($sMDB_FileFullPath, 3) <> "mdb" Then SearchPath($sMDB_FileFullPath) ; meant for integration with Jenkins where currently it is not possible to know beforehand what the full path is
 	$sGraphiteHost = InputBox("Graphite", "Graphite hostname or IP address?", "172.21.42.150")
 	If $sGraphiteHost = "" Or @error Then
 		MsgBox(16, "Error", "No valid Graphite hostname or IP address specified.")
@@ -36,6 +32,11 @@ Else
 	$nGraphitePort = InputBox("Graphite", "Graphite port number?", "2003")
 	If $nGraphitePort = "" Or @error Then
 		MsgBox(16, "Error", "No valid Graphite port number specified.")
+		Exit
+	EndIf
+	$nTimeZoneOffset = InputBox("Timezone", "Timezone offset? (hours)", "0")
+	If $nTimeZoneOffset = "" Or @error Then
+		MsgBox(16, "Error", "No valid timezone offset specified.")
 		Exit
 	EndIf
 EndIf
@@ -57,12 +58,16 @@ If @error Then SetError(@error, @extended, $ADO_RET_FAILURE)
 
 ;determine available scripts
 $aScriptTable = _ADO_Execute($oConnection, "SELECT * FROM Script", True)
-	If @error Then MsgBox(16, "Query script table", "Query failed. Valid LoadRunner database specified? (and not OUTPUT.MDB?)")
+;~ 	If @error Then
+;~ 		MsgBox(16, "Query script table", "Query failed. Valid LoadRunner database specified? (and not OUTPUT.MDB?)")
+;~ 		_ADO_Connection_Close($oConnection)
+;~ 		$oConnection = Null
+;~ 	EndIf
 $nScripts = UBound($aScriptTable[2])
-	If @error Then MsgBox(16, "Error", "Amount of scripts could not be determined.")
+;~ 	If @error Then MsgBox(16, "Error", "Amount of scripts could not be determined.")
 ; determine start time of test
 $aStartTime = _ADO_Execute($oConnection, "SELECT * FROM Result", True)
-$nStartTime = ($aStartTime[2])[0][4]
+$nStartTime = ($aStartTime[2])[0][4] + ($nTimeZoneOffset * 3600) ; timezone offset correction
 If $nScripts > 1 Then
 	$sText = "scripts"
 Else
@@ -209,3 +214,8 @@ Func Percentile ($aNumbers, $nPercentile)  ;  Linear Interpolation Between Close
 
 	Return $aNumbers[$nElementIndexMin - 1] + ($nFraction * ($aNumbers[$nElementIndexMax - 1] - $aNumbers[$nElementIndexMin - 1]))
 EndFunc ; Percentile
+
+Func SearchPath (ByRef $sPath)
+;~ 	FileF
+	Return True
+EndFunc ; SearchPath
