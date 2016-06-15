@@ -25,5 +25,5 @@ LR2Graphite.exe <path to LR mdb> <Graphite host> <Graphite port>
 
 ### Prerequisites
 Analysed LoadRunner testrun with an MDB file. Not OUTPUT.MDB  
-OS: Windows
+OS: Windows  
 AutoIt for editing code and debugging.  
