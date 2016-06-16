@@ -13,7 +13,18 @@
 
 If $CmdLine[0] = 4 Then
 	$sMDB_FileFullPath = $CmdLine[1]
-	If StringRight($sMDB_FileFullPath, 3) <> "mdb" Then SearchPath($sMDB_FileFullPath) ; meant for integration with Jenkins where currently it is not possible to know beforehand what the full path is
+	If StringRight($sMDB_FileFullPath, 3) <> "mdb" Then
+		SearchPath($sMDB_FileFullPath) ; meant for integration with Jenkins where currently it is not possible to know beforehand what the full path is
+		If ProcessExists("wlrun.exe") Then
+			ConsoleWriteError("LoadRunner controller, wlrun.exe, will be closed forcefully" & @CRLF)
+			TrayTip("LoadRunner", "controller process, wlrun.exe, will be closed forcefully", 3)
+			If Not ProcessClose("wlrun.exe") Then
+				ConsoleWriteError("Unable to close wlrun.exe" & @CRLF)
+				Msgbox(16, "LoadRunner", "Unable to close wlrun.exe", 5)
+				Exit 1
+			EndIf
+		EndIf
+	EndIf
 	$sGraphiteHost = $CmdLine[2]
 	$nGraphitePort = $CmdLine[3]
 	$nTimeZoneOffset = $CmdLine[4]
@@ -22,22 +33,22 @@ Else
 	$sMDB_FileFullPath = FileOpenDialog("Location of LoadRunner mdb database file?", "", "LoadRunner analysis (*.mdb)")
 	If $sMDB_FileFullPath = "" Or @error Then
 		MsgBox(16, "Error", "No valid location for LoadRunner mdb databbase file specified.")
-		Exit
+		Exit 1
 	EndIf
 	$sGraphiteHost = InputBox("Graphite", "Graphite hostname or IP address?", "172.21.42.150")
 	If $sGraphiteHost = "" Or @error Then
 		MsgBox(16, "Error", "No valid Graphite hostname or IP address specified.")
-		Exit
+		Exit 1
 	EndIf
 	$nGraphitePort = InputBox("Graphite", "Graphite port number?", "2003")
 	If $nGraphitePort = "" Or @error Then
 		MsgBox(16, "Error", "No valid Graphite port number specified.")
-		Exit
+		Exit 1
 	EndIf
 	$nTimeZoneOffset = InputBox("Timezone", "Timezone offset? (hours)", "0")
 	If $nTimeZoneOffset = "" Or @error Then
 		MsgBox(16, "Error", "No valid timezone offset specified.")
-		Exit
+		Exit 1
 	EndIf
 EndIf
 
@@ -59,9 +70,10 @@ If @error Then SetError(@error, @extended, $ADO_RET_FAILURE)
 ;determine available scripts
 $aScriptTable = _ADO_Execute($oConnection, "SELECT * FROM Script", True)
 If @error Then
-	MsgBox(16, "Query script table", "Query failed. Valid LoadRunner database specified? (and not OUTPUT.MDB?)")
+	MsgBox(16, "Query script table", "Query failed. Valid LoadRunner database specified? (and not OUTPUT.MDB?)", 5)
 	_ADO_Connection_Close($oConnection)
 	$oConnection = Null
+	Exit 1
 EndIf
 $nScripts = UBound($aScriptTable[2])
 
@@ -84,13 +96,13 @@ For $i = 0 to $nScripts - 1  ; loop through available scripts
 	$sQuery = "SELECT Event_map.[Event Name], Event_meter.[End Time], Event_meter.Value FROM Event_map INNER JOIN Event_meter ON Event_map.[Event ID] = Event_meter.[Event ID] WHERE (((Event_meter.[Script ID])=" & $i & ")) ORDER BY Event_map.[Event Name], Event_meter.[End Time];"
 	$rc = _ADO_Execute($oConnection, $sQuery, True)
 	If Not IsArray($rc) Or @error Then
-		MsgBox(16, "Query measurements per script", "Query for script " & $sScriptName & " failed.")
+		MsgBox(16, "Query measurements per script", "Query for script " & $sScriptName & " failed.", 5)
 		ContinueLoop
 	Else
 		$aMeasurementsPerScript[$i] = (_ADO_Execute($oConnection, $sQuery, True))[2]
-		If @error Then MsgBox(16, "Query measurements per script", "Query for script " & $sScriptName & " failed.")
+		If @error Then MsgBox(16, "Query measurements per script", "Query for script " & $sScriptName & " failed.", 5)
 		$rc = ProcessScript($aMeasurementsPerScript[$i], $sScriptName)
-		if @error Or Not $rc Then MsgBox(16, "Error", "Processing for script " & $sScriptName & " failed.")
+		if @error Or Not $rc Then MsgBox(16, "Error", "Processing for script " & $sScriptName & " failed.", 5)
 	EndIf
 Next
 
@@ -98,8 +110,8 @@ Next
 _ADO_Connection_Close($oConnection)
 $oConnection = Null
 
-TrayTip("Ready!", "LoadRunner metrics exported to Graphite", 4)
-Sleep(4000)
+TrayTip("Ready!", "LoadRunner metrics exported to Graphite", 3)
+Sleep(3000)
 
 TCPShutdown()
 
@@ -117,7 +129,7 @@ Func ProcessScript ($aMeasurements, ByRef $sScript)
 		Next
 		$ret = ProcessTransaction($aTransactionsSplit, $aUniqueTransactions[$i], $sScript)
 		if @error Or Not $ret Then
-			MsgBox(16, "Error", "Processing transactions for transaction " & $aUniqueTransactions[$i] & " belonging to script " & $sScriptName & " failed.")
+			MsgBox(16, "Error", "Processing transactions for transaction " & $aUniqueTransactions[$i] & " belonging to script " & $sScriptName & " failed.", 5)
 			Return False
 		EndIf
 	Next
@@ -140,7 +152,7 @@ Func ProcessTransaction ($aTransactions, ByRef $sTransactionName, ByRef $sScript
 ;	_ArrayDisplay($aBucketsHolder[$nBuckets - 1])
 	$ret = ProcessBuckets($aBucketsHolder, $sTransactionName, $sScript)
 	if @error Or Not $ret Then
-		MsgBox(16, "Error", "Processing buckets for transaction " & $sTransactionName & " belonging to script " & $sScript & " failed.")
+		MsgBox(16, "Error", "Processing buckets for transaction " & $sTransactionName & " belonging to script " & $sScript & " failed.", 5)
 		Return False
 	EndIf
 
@@ -218,7 +230,7 @@ EndFunc ; Percentile
 Func SearchPath (ByRef $sPath)
 	Local $hSearch = FileFindFirstFile($sPath & "\*.")
 	    If $hSearch = -1 Then
-        MsgBox(16, "Error", "No subdirectory found.")
+        MsgBox(16, "Error", "No subdirectory found.", 5)
         Return False
     EndIf
 
