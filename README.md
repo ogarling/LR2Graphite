@@ -18,12 +18,22 @@ At the moment the following response time metrics can be exported per transactio
 ### How to use?
 Standalone, manually or included in a pipeline. For example: [LoadRunner integration in Jenkins](https://wiki.jenkins-ci.org/display/JENKINS/HP+Application+Automation+Tools)   
 
-Compiled executable can be run with (pipeline) or without command line options (manually/interactive):
+Compiled executable can be run with (pipeline) or without command line options (manually/interactive)  
+Manually (interactive):
 ```
-LR2Graphite.exe <path to LR mdb> <Graphite host> <Graphite port>
+LR2Graphite.exe  
+```
+Manually (command line):
+```
+LR2Graphite.exe <path to LR mdb> <Graphite host> <Graphite port> <timezone offset (hours)>  
+```
+Jenkins:
+```
+LR2Graphite.exe <path to Jenkins job workspace> <Graphite host> <Graphite port> <timezone offset (hours)>  
 ```
 
+
 ### Prerequisites
-Analysed LoadRunner testrun with an MDB file. Not OUTPUT.MDB  
+Analysed LoadRunner testrun with an MDB file. Note: do not select OUTPUT.MDB  
 OS: Windows  
 AutoIt for editing code and debugging.  
