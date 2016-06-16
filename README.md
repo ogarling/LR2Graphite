@@ -3,7 +3,7 @@
 
 ### Why?
 When using LoadRunner in combination with another load test tool like Gatling, JMeter, etc. it would be nice to unify performance test metrics like response time statistics into a single datasource like Graphite.  
-Works excellent in combination with [targets I/O](https://github.com/dmoll1974/targets-io) tool.
+Works excellent in combination with [targets io](https://github.com/dmoll1974/targets-io) tool.
 
 ### What?
 By using an [AutoIt](https://www.autoitscript.com/site/) script or executable the LoadRunner analysis MS Access database is being queried and the results are exported into Graphite.
@@ -19,7 +19,7 @@ At the moment the following response time metrics can be exported per transactio
 ### How to use?
 Standalone, manually or included in a pipeline. For example: [LoadRunner integration in Jenkins](https://wiki.jenkins-ci.org/display/JENKINS/HP+Application+Automation+Tools)   
 
-Compiled executable can be run with (pipeline) or without command line options (manually/interactive)  
+Compiled executable can be run with (pipeline) or without command line options (manually/interactive)   
 Manually (interactive):
 ```
 LR2Graphite.exe  
