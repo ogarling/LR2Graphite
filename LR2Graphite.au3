@@ -13,6 +13,7 @@
 
 If $CmdLine[0] = 4 Then
 	$sMDB_FileFullPath = $CmdLine[1]
+	If StringRight($sMDB_FileFullPath, 3) <> "mdb" Then SearchPath($sMDB_FileFullPath) ; meant for integration with Jenkins where currently it is not possible to know beforehand what the full path is
 	$sGraphiteHost = $CmdLine[2]
 	$nGraphitePort = $CmdLine[3]
 	$nTimeZoneOffset = $CmdLine[4]
@@ -23,7 +24,6 @@ Else
 		MsgBox(16, "Error", "No valid location for LoadRunner mdb databbase file specified.")
 		Exit
 	EndIf
-;~ 	If StringRight($sMDB_FileFullPath, 3) <> "mdb" Then SearchPath($sMDB_FileFullPath) ; meant for integration with Jenkins where currently it is not possible to know beforehand what the full path is
 	$sGraphiteHost = InputBox("Graphite", "Graphite hostname or IP address?", "172.21.42.150")
 	If $sGraphiteHost = "" Or @error Then
 		MsgBox(16, "Error", "No valid Graphite hostname or IP address specified.")
@@ -58,13 +58,13 @@ If @error Then SetError(@error, @extended, $ADO_RET_FAILURE)
 
 ;determine available scripts
 $aScriptTable = _ADO_Execute($oConnection, "SELECT * FROM Script", True)
-;~ 	If @error Then
-;~ 		MsgBox(16, "Query script table", "Query failed. Valid LoadRunner database specified? (and not OUTPUT.MDB?)")
-;~ 		_ADO_Connection_Close($oConnection)
-;~ 		$oConnection = Null
-;~ 	EndIf
+If @error Then
+	MsgBox(16, "Query script table", "Query failed. Valid LoadRunner database specified? (and not OUTPUT.MDB?)")
+	_ADO_Connection_Close($oConnection)
+	$oConnection = Null
+EndIf
 $nScripts = UBound($aScriptTable[2])
-;~ 	If @error Then MsgBox(16, "Error", "Amount of scripts could not be determined.")
+
 ; determine start time of test
 $aStartTime = _ADO_Execute($oConnection, "SELECT * FROM Result", True)
 $nStartTime = ($aStartTime[2])[0][4] + ($nTimeZoneOffset * 3600) ; timezone offset correction
@@ -216,6 +216,20 @@ Func Percentile ($aNumbers, $nPercentile)  ;  Linear Interpolation Between Close
 EndFunc ; Percentile
 
 Func SearchPath (ByRef $sPath)
-;~ 	FileF
+	Local $hSearch = FileFindFirstFile($sPath & "\*.")
+	    If $hSearch = -1 Then
+        MsgBox(16, "Error", "No subdirectory found.")
+        Return False
+    EndIf
+
+    While 1
+        $sDir = FileFindNextFile($hSearch)
+        ; If there is no more file matching the search.
+        If @error Then ExitLoop
+		If StringLen($sDir) = 6 Then $sPath = $sPath & "\" & $sDir & "\LRA\LRA.mdb"
+		ExitLoop
+	WEnd
+
+	FileClose($hSearch)
 	Return True
 EndFunc ; SearchPath
