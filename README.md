@@ -30,6 +30,7 @@ LR2Graphite.exe <path to LR mdb> <Graphite host> <Graphite port> <timezone offse
 Jenkins:
 ```
 LR2Graphite.exe <path to Jenkins job workspace> <Graphite host> <Graphite port> <timezone offset (hours)>  
+e.g. LR2Graphite.exe "%WORKSPACE%" 123.123.123.123 2003 0  
 ```
 
 
