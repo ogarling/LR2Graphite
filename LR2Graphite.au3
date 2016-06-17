@@ -29,7 +29,7 @@ If $CmdLine[0] = 4 Then
 	$nGraphitePort = $CmdLine[3]
 	$nTimeZoneOffset = $CmdLine[4]
 Else
-	ConsoleWrite("Please specify following mandatory command line options: LR2Graphite <path to LR mdb> <Graphite host> <Graphite port>" & @CRLF)
+	ConsoleWrite("Please specify following mandatory command line options: LR2Graphite <path to LR mdb> <Graphite host> <Graphite port> <timezone offset (hours)>" & @CRLF)
 	$sMDB_FileFullPath = FileOpenDialog("Location of LoadRunner mdb database file?", "", "LoadRunner analysis (*.mdb)")
 	If $sMDB_FileFullPath = "" Or @error Then
 		MsgBox(16, "Error", "No valid location for LoadRunner mdb databbase file specified.")
@@ -172,12 +172,12 @@ EndFunc		; PlaceInBucket
 Func ProcessBuckets ($aBuckets, ByRef $sTransactionName, ByRef $sScript)
 	ConsoleWrite(UBound($aBuckets) & " buckets to process" & @CRLF)
 	For $i = 0 to UBound($aBuckets) - 1
-		If IsArray($aBuckets[$i]) Then ExportToGraphite($sGraphiteRootNamespace & "." & StringReplace($sScript, " ", "_") & "." & StringReplace($sTransactionName, " ", "_"), _ArrayMin($aBuckets[$i]), Average($aBuckets[$i]), _ArrayMax($aBuckets[$i]), Percentile($aBuckets[$i], $nPercentile), $nStartTime + (($i + 1) * $nGraphiteResolution))
+		If IsArray($aBuckets[$i]) Then ExportToGraphite($sGraphiteRootNamespace & "." & StringReplace($sScript, " ", "_") & "." & StringReplace($sTransactionName, " ", "_"), _ArrayMin($aBuckets[$i]), Average($aBuckets[$i]), _ArrayMax($aBuckets[$i]), Percentile($aBuckets[$i], $nPercentile), UBound($aBuckets[$i]) / $nGraphiteResolution, $nStartTime + (($i + 1) * $nGraphiteResolution))
 	Next
 	Return True
 EndFunc
 
-Func ExportToGraphite ($sMetricPath, $nMin, $nAvg, $nMax, $nPerc, $nEpoch)
+Func ExportToGraphite ($sMetricPath, $nMin, $nAvg, $nMax, $nPerc, $nTps, $nEpoch)
 	If $iSocket = Null Then $iSocket = TCPConnect($sGraphiteHost, $nGraphitePort)
 		$ret = TCPSend($iSocket, $sMetricPath & ".min " & $nMin & " " & $nEpoch & @LF)
 		If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".min" & @CRLF)
@@ -191,7 +191,9 @@ Func ExportToGraphite ($sMetricPath, $nMin, $nAvg, $nMax, $nPerc, $nEpoch)
 		$ret = TCPSend($iSocket, $sMetricPath & ".perc " & $nPerc & " " & $nEpoch & @LF)
 		If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".perc" & @CRLF)
 		If Not @error Then $nPayloadBytes += $ret
-;~ 		ConsoleWrite("Payload bytes: " & $nPayloadBytes & @CRLF)
+		$ret = TCPSend($iSocket, $sMetricPath & ".tps " & $nTps & " " & $nEpoch & @LF)
+		If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".tps" & @CRLF)
+		If Not @error Then $nPayloadBytes += $ret
 
 	If $nPayloadBytes > 256000 Then  ; after 250KB use new TCP connection
 		$ret = TCPCloseSocket($iSocket)
