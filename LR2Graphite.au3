@@ -14,7 +14,7 @@
 If $CmdLine[0] = 4 Then
 	$sMDB_FileFullPath = $CmdLine[1]
 	If StringRight($sMDB_FileFullPath, 3) <> "mdb" Then
-		SearchPath($sMDB_FileFullPath) ; meant for integration with Jenkins where currently it is not possible to know beforehand what the full path is
+		SearchPath($sMDB_FileFullPath) ; meant for integration with Jenkins plugin where currently it is not possible to know beforehand what the full path is due to randomly chosen 6 hexadecimals as subdirectory
 		If ProcessExists("wlrun.exe") Then
 			ConsoleWriteError("LoadRunner controller, wlrun.exe, will be closed forcefully" & @CRLF)
 			TrayTip("LoadRunner", "controller process, wlrun.exe, will be closed forcefully", 3)
@@ -52,9 +52,8 @@ Else
 	EndIf
 EndIf
 
+; TODO: ini file
 $sConnectionString = "Driver={Microsoft Access Driver (*.mdb)}; DBQ=" & $sMDB_FileFullPath
-;~ $sGraphiteHost = "172.21.42.150"
-;~ $nGraphitePort = 2003
 $sGraphiteRootNamespace = "LoadRunner"
 Global Const $nGraphiteResolution = 10 ; aggregation resolution (seconds); determines timespan of "bucket"
 Global Const $nPercentile = 99   ; percentage expressed in a number between 0 and 100
