@@ -12,23 +12,30 @@
 #include <Date.au3>
 #include <Array.au3>
 
-;TODO: command line uitwerken
+Const $sIni = StringTrimRight(@ScriptName, 3) & "ini"
+
 If $CmdLine[0] > 0 Then
 	$sScenarioPath = $CmdLine[1]
+	If $CmdLine[0] = 5 Then ; Jenkins mode!
+		$sProductName = $CmdLine[2]
+		$sDashboardName = $CmdLine[3]
+		$sTestrunId = $CmdLine[4]
+		$sBuildResultsUrl = $CmdLine[5]
+	Else ; standalone mode
+		$sProductName = IniRead($sIni, "targets io", "ProductName", "LOADRUNNER")
+		$sDashboardName = IniRead($sIni, "targets io", "DashboardName", "LOAD")
+		$sTestrunId = "LoadRunner-" & StringReplace(_DateTimeFormat(_NowCalc(), 2), "/", "-") & "-" & Random(1,99999,1)
+		$sBuildResultsUrl = ""
+	EndIf
 Else
 	ConsoleWriteError("Please provide at least one command line option argument: the path to the LoadRunner scenario file to be used." & @CRLF)
 	Exit 1
 EndIf
-;~ $sScenarioPath = "C:\scripts\Jscen.lrs" ; debugging only!
-$sScenarioPath = "C:\scripts\kort.lrs" ; debugging only!
 
-Const $sIni = StringTrimRight(@ScriptName, 3) & "ini"
 Const $sLRpath = IniRead($sIni, "LoadRunner", "LRpath", "C:\Program Files (x86)\HP\LoadRunner\bin\wlrun.exe")
-Const $nTimeout = IniRead($sIni, "LoadRunner", "TimeoutDefault", "60")
+Const $nTimeout = IniRead($sIni, "LoadRunner", "TimeoutDefault", "90")
 Const $sGraphiteHost = IniRead($sIni, "Graphite", "GraphiteHost", "172.21.42.150")
 Const $nGraphitePort = IniRead($sIni, "Graphite", "GraphitePort", "3000")
-Const $sProductName = IniRead($sIni, "targets io", "ProductName", "LOADRUNNER")
-Const $sDashboardName = IniRead($sIni, "targets io", "DashboardName", "LOAD")
 Const $sProductRelease = IniRead($sIni, "targets io", "ProductRelease", "1.0")
 Const $nRampupPeriod = IniRead($sIni, "targets io", "RampupPeriod", "10")
 Const $nTimeZoneOffset = IniRead($sIni, "LR2Graphite", "TimeZoneOffset", "-1")
