@@ -170,11 +170,8 @@ Func LrsScriptPaths($sFile)
 	While 1
 		$sLine = FileReadLine($hFile)
 		If @error = -1 Then ExitLoop ; when EOF is reached
-		;If StringRight($sLine, 3) = "usr" Then
 		If StringRight($sLine, 3) = "usr" Then
 			$aPath = StringSplit($sLine, "\")
-			;_ArrayDisplay($aPath)
-			;MsgBox(0,0,@WorkingDir & "\" & $aPath[$aPath[0] - 1] & "\" & $aPath[$aPath[0]])
 			FileWriteLine($hFileTmp, "Path=" & @WorkingDir & "\" & $aPath[$aPath[0] - 1] & "\" & $aPath[$aPath[0]])
 		Else
 			FileWriteLine($hFileTmp, $sLine)
