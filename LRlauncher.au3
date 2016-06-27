@@ -175,7 +175,7 @@ Func LrsScriptPaths($sFile)
 			$aPath = StringSplit($sLine, "\")
 			;_ArrayDisplay($aPath)
 			;MsgBox(0,0,@WorkingDir & "\" & $aPath[$aPath[0] - 1] & "\" & $aPath[$aPath[0]])
-			FileWriteLine($hFileTmp, @WorkingDir & "\" & $aPath[$aPath[0] - 1] & "\" & $aPath[$aPath[0]])
+			FileWriteLine($hFileTmp, "Path=" & @WorkingDir & "\" & $aPath[$aPath[0] - 1] & "\" & $aPath[$aPath[0]])
 		Else
 			FileWriteLine($hFileTmp, $sLine)
 		EndIf
