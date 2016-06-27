@@ -70,7 +70,7 @@ If ProcessExists("wlrun.exe") Then
 		Exit 1
 	EndIf
 EndIf
-$iPid = Run($sLRpath & " -Run -InvokeAnalysis -TestPath " & $sScenarioPath & " -ResultName " & @WorkingDir & "\LRR")
+$iPid = Run($sLRpath & ' -Run -InvokeAnalysis -TestPath "' & $sScenarioPath & '" -ResultName "' & @WorkingDir & '\LRR"')
 If $iPid = 0 Or @error Then
 	ConsoleWriteError("Something went wrong starting the scenario file with LoadRunner" & @CRLF)
 	Exit 1
