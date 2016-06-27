@@ -28,20 +28,23 @@ If $CmdLine[0] > 0 Then
 		$sBuildResultsUrl = ""
 	EndIf
 Else
-	ConsoleWriteError("Please provide at least one command line option argument: the path to the LoadRunner scenario file to be used." & @CRLF)
+	ConsoleWriteError("Please provide at least one command line option argument: the path to the LoadRunner scenario file to be used." & @CRLF & @CRLF)
+	ConsoleWriteError("LRlauncher.exe <path to scenario file>" & @CRLF & @CRLF & "or Jenkins mode:" & @CRLF)
+	ConsoleWriteError("LRlauncher.exe <path to scenario file> <ProductName> <DashboardName> <TestrunId> <BuildResultsUrl>" & @CRLF & @CRLF)
+	ConsoleWriteError("Please note: to be used script directories must be present in working directory from where LRlauncher is executed." & @CRLF)
 	Exit 1
 EndIf
 
-Const $sLRpath = IniRead($sIni, "LoadRunner", "LRpath", "C:\Program Files (x86)\HP\LoadRunner\bin\wlrun.exe")
-Const $nTimeout = IniRead($sIni, "LoadRunner", "TimeoutDefault", "90")
-Const $sGraphiteHost = IniRead($sIni, "Graphite", "GraphiteHost", "172.21.42.150")
-Const $nGraphitePort = IniRead($sIni, "Graphite", "GraphitePort", "3000")
-Const $sProductRelease = IniRead($sIni, "targets io", "ProductRelease", "1.0")
-Const $nRampupPeriod = IniRead($sIni, "targets io", "RampupPeriod", "10")
-Const $nTimeZoneOffset = IniRead($sIni, "LR2Graphite", "TimeZoneOffset", "-1")
+$sLRpath = IniRead($sIni, "LoadRunner", "LRpath", "C:\Program Files (x86)\HP\LoadRunner\bin\wlrun.exe")
+$nTimeout = IniRead($sIni, "LoadRunner", "TimeoutDefault", "90")
+$sGraphiteHost = IniRead($sIni, "Graphite", "GraphiteHost", "172.21.42.150")
+$nGraphitePort = IniRead($sIni, "Graphite", "GraphitePort", "3000")
+$sProductRelease = IniRead($sIni, "targets io", "ProductRelease", "1.0")
+$nRampupPeriod = IniRead($sIni, "targets io", "RampupPeriod", "10")
+$nTimeZoneOffset = IniRead($sIni, "LR2Graphite", "TimeZoneOffset", "-1")
 
 If Not LrsScriptPaths($sScenarioPath) Then
-	ConsoleWriteError("Something went wrong while correcting script paths in scenario file." & $sScenarioPath & @CRLF)
+	ConsoleWriteError("Something went wrong while correcting script paths in scenario file " & $sScenarioPath & @CRLF & "Now exiting." & @CRLF)
 	Exit 1
 EndIf
 
@@ -187,4 +190,5 @@ Func LrsScriptPaths($sFile)
 		ConsoleWriteError("Unable to rename temporary scenario file to new scenario file" & @CRLF)
 		Return False
 	EndIf
+	Return True
 EndFunc ; LrsScriptPaths

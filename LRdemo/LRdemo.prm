@@ -1,0 +1,8 @@
+[parameter:rndTrans]
+Format="%02lu"
+GenerateNewVal="EachIteration"
+MaxValue="10"
+MinValue="1"
+OriginalValue=""
+ParamName="rndTrans"
+Type="Random"
