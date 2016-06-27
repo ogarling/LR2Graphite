@@ -13,7 +13,6 @@
 #include <Array.au3>
 
 Const $sIni = StringTrimRight(@ScriptName, 3) & "ini"
-
 If $CmdLine[0] > 0 Then
 	$sScenarioPath = $CmdLine[1]
 	If $CmdLine[0] = 5 Then ; Jenkins mode!
@@ -44,8 +43,10 @@ $nRampupPeriod = IniRead($sIni, "targets io", "RampupPeriod", "10")
 $nTimeZoneOffset = IniRead($sIni, "LR2Graphite", "TimeZoneOffset", "-1")
 
 If Not LrsScriptPaths($sScenarioPath) Then
-	ConsoleWriteError("Something went wrong while correcting script paths in scenario file " & $sScenarioPath & @CRLF & "Now exiting." & @CRLF)
+	ConsoleWriteError("Something went wrong while patching script paths in scenario file " & $sScenarioPath & @CRLF & "Now exiting." & @CRLF)
 	Exit 1
+Else
+	ConsoleWrite("Scenario file " & $sScenarioPath & " patched successfully." & @CRLF)
 EndIf
 
 ; check if old LRA dir exists and if so, rename it to .old
@@ -59,17 +60,21 @@ EndIf
 
 ; send start event to targets io
 $nRnd = Random(1,99999999,1)
-; TODO: testrunid overnemen uit Jenkins of anders timestamp van maken _DateTimeSplit
-SendJSONRunningTest("start", $sProductName, $sDashboardName, $nRnd, "", $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
+ConsoleWrite("Sending start event to targets io: ")
+; TODO: return value afvangen
+SendJSONRunningTest("start", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
+ConsoleWrite("successfull" & @CRLF)
 
 ; check and run LoadRunner controller
 If ProcessExists("wlrun.exe") Then
 	ConsoleWriteError("LoadRunner controller process already running. Now closing." & @CRLF)
 	If Not ProcessClose("wlrun.exe") Then
-		ConsoleWriteError("LoadRunner controller process already running. Now closing." & @CRLF)
+		ConsoleWriteError("Unable to close LoadRunner controller process. Now exiting." & @CRLF)
 		Exit 1
 	EndIf
 EndIf
+If WinExists("HP LoadRunner Controller") Then WinClose("HP LoadRunner Controller")
+ConsoleWrite("Run LoadRunner scenario started." & @CRLF)
 $iPid = Run($sLRpath & ' -Run -InvokeAnalysis -TestPath "' & $sScenarioPath & '" -ResultName "' & @WorkingDir & '\LRR"')
 If $iPid = 0 Or @error Then
 	ConsoleWriteError("Something went wrong starting the scenario file with LoadRunner" & @CRLF)
@@ -87,9 +92,13 @@ EndIf
 
 ; send end event to targets io
 ; TODO: keepalive op termijn verwijderen
-SendJSONRunningTest("keepalive", $sProductName, $sDashboardName, $nRnd, "", $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
-SendJSONRunningTest("end", $sProductName, $sDashboardName, $nRnd, "", $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
+SendJSONRunningTest("keepalive", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
+ConsoleWrite("Sending keepalive event to targets io: ")
+SendJSONRunningTest("end", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
+ConsoleWrite("Sending end event to targets io: ")
+; TODO: rv s afvangen en writen
 
+ConsoleWrite("Analyzing results." & @CRLF)
 ; wait until completion of LoadRunner analysis
 Sleep(2000) ; give analysis tool time to start
 If Not ProcessWaitClose("AnalysisUI.exe", 300) Then
@@ -101,9 +110,12 @@ If Not ProcessWaitClose("AnalysisUI.exe", 300) Then
 EndIf
 
 ; check if results and analysis are properly executed and LoadRunner processes are closed
+Sleep(2000) ; give analysis tool time to start
 If Not FileExists(@WorkingDir & "\LRR\LRA\LRA.mdb") Then
 	ConsoleWriteError("Error: LoadRunner Access database is not present. Remaining LoadRunner processes will be closed." & @CRLF)
 	Exit 1
+Else
+	ConsoleWrite("Analysis Access database is present." & @CRLF)
 EndIf
 If ProcessExists($iPid) Or ProcessExists("wlrun.exe") Or WinExists("HP LoadRunner Controller") Then
 	ConsoleWriteError("LoadRunner controller process detected, now closing." & @CRLF)
@@ -121,11 +133,14 @@ If ProcessExists("AnalysisUI.exe") Then
 EndIf
 
 ; launching LR2Graphite
+ConsoleWrite("Launching LR2Graphite." & @CRLF)
 $ret = RunWait(@WorkingDir & '\LR2Graphite.exe "' & @WorkingDir & '\LRR\LRA\LRA.mdb" 172.21.42.150 2003 -1')
 If $ret <> 0 Or @error Then
 	ConsoleWriteError("Something went wrong during LR2Graphite execution. Now exiting." & @CRLF)
 	Exit 1
 EndIf
+
+If WinExists("HP LoadRunner Controller") Then WinClose("HP LoadRunner Controller")
 
 ; return success
 Exit 0
