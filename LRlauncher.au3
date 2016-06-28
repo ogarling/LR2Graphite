@@ -21,8 +21,8 @@ If $CmdLine[0] > 0 Then
 		$sTestrunId = $CmdLine[4]
 		$sBuildResultsUrl = $CmdLine[5]
 	Else ; standalone mode
-		$sProductName = IniRead($sIni, "targets io", "ProductName", "LOADRUNNER")
-		$sDashboardName = IniRead($sIni, "targets io", "DashboardName", "LOAD")
+		$sProductName = IniRead($sIni, "targets-io", "ProductName", "LOADRUNNER")
+		$sDashboardName = IniRead($sIni, "targets-io", "DashboardName", "LOAD")
 		$sTestrunId = "LoadRunner-" & StringReplace(_DateTimeFormat(_NowCalc(), 2), "/", "-") & "-" & Random(1,99999,1)
 		$sBuildResultsUrl = ""
 	EndIf
@@ -38,15 +38,15 @@ $sLRpath = IniRead($sIni, "LoadRunner", "LRpath", "C:\Program Files (x86)\HP\Loa
 $nTimeout = IniRead($sIni, "LoadRunner", "TimeoutDefault", "90")
 $sGraphiteHost = IniRead($sIni, "Graphite", "GraphiteHost", "172.21.42.150")
 $nGraphitePort = IniRead($sIni, "Graphite", "GraphitePort", "3000")
-$sProductRelease = IniRead($sIni, "targets io", "ProductRelease", "1.0")
-$nRampupPeriod = IniRead($sIni, "targets io", "RampupPeriod", "10")
+$sProductRelease = IniRead($sIni, "targets-io", "ProductRelease", "1.0")
+$nRampupPeriod = IniRead($sIni, "targets-io", "RampupPeriod", "10")
 $nTimeZoneOffset = IniRead($sIni, "LR2Graphite", "TimeZoneOffset", "-1")
 
 If Not LrsScriptPaths($sScenarioPath) Then
 	ConsoleWriteError("Something went wrong while patching script paths in scenario file " & $sScenarioPath & @CRLF & "Now exiting." & @CRLF)
 	Exit 1
 Else
-	ConsoleWrite("Scenario file " & $sScenarioPath & " patched successfully." & @CRLF)
+	ConsoleWrite("Scenario file " & $sScenarioPath & " patched successfully: script paths have been adapted to current working directory." & @CRLF)
 EndIf
 
 ; check if old LRA dir exists and if so, rename it to .old
@@ -58,12 +58,12 @@ If FileExists(@WorkingDir & "\LRR\LRA") Then
 	EndIf
 EndIf
 
-; send start event to targets io
+; send start event to targets-io
 $nRnd = Random(1,99999999,1)
-ConsoleWrite("Sending start event to targets io: ")
+ConsoleWrite("Sending start event to targets-io: ")
 ; TODO: return value afvangen
 SendJSONRunningTest("start", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
-ConsoleWrite("successfull" & @CRLF)
+ConsoleWrite("successful" & @CRLF)
 
 ; check and run LoadRunner controller
 If ProcessExists("wlrun.exe") Then
@@ -74,7 +74,7 @@ If ProcessExists("wlrun.exe") Then
 	EndIf
 EndIf
 If WinExists("HP LoadRunner Controller") Then WinClose("HP LoadRunner Controller")
-ConsoleWrite("Run LoadRunner scenario started." & @CRLF)
+ConsoleWrite("Running of LoadRunner scenario started." & @CRLF)
 $iPid = Run($sLRpath & ' -Run -InvokeAnalysis -TestPath "' & $sScenarioPath & '" -ResultName "' & @WorkingDir & '\LRR"')
 If $iPid = 0 Or @error Then
 	ConsoleWriteError("Something went wrong starting the scenario file with LoadRunner" & @CRLF)
@@ -83,12 +83,14 @@ EndIf
 
 ; wait until timeout
 $sTestStart = _Now()
+ConsoleWrite("Sending keepalive events to targets-io during test: ")
 While _DateDiff("n", _Now, $sTestStart) < $nTimeout
 	Sleep(15000) ; keepalive interval
 	SendJSONRunningTest("keepalive", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
-	ConsoleWrite("Sending keepalive event to targets io." & @CRLF)
+	ConsoleWrite(".")
 	If Not ProcessExists($iPid) Then ExitLoop
 WEnd
+ConsoleWrite(@CRLF)
 If ProcessExists($iPid) Then
 	ConsoleWriteError("LoadRunner controller took too long to complete scenario. Timeout set at " & $nTimeout & " minutes. " & @CRLF & "Please check if LoadRunner is stalling or set higher timeout value. LoadRunner process, if still running, will be closed now..." & @CRLF)
 	If Not ProcessClose($iPid) Then
@@ -96,17 +98,12 @@ If ProcessExists($iPid) Then
 	EndIf
 	Exit 1
 EndIf
-;If Not ProcessWaitClose($iPid, $nTimeout * 60) Then
 
-; send end event to targets io
-; TODO: keepalive op termijn verwijderen
-;~ SendJSONRunningTest("keepalive", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
-;~ ConsoleWrite("Sending keepalive event to targets io: ")
-ConsoleWrite("Sending end event to targets io: " & @CRLF)
+; send end event to targets-io
+ConsoleWrite("Sending end event to targets io." & @CRLF)
 If Not SendJSONRunningTest("end", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod) Then
-	ConsoleWriteError("unsuccessful. Test will have status incompleted in targets-io." & @CRLF)
+	ConsoleWriteError("Sending end event unsuccessful: test will have status incompleted in targets-io." & @CRLF)
 EndIf
-; TODO: rv s afvangen en writen
 
 ConsoleWrite("Analyzing results." & @CRLF)
 ; wait until completion of LoadRunner analysis
@@ -152,6 +149,8 @@ $ret = RunWait(@WorkingDir & '\LR2Graphite.exe "' & @WorkingDir & '\LRR\LRA\LRA.
 If $ret <> 0 Or @error Then
 	ConsoleWriteError("Something went wrong during LR2Graphite execution. Now exiting." & @CRLF)
 	Exit 1
+Else
+	ConsoleWrite("LoadRunner metrics successfully imported into Graphite!" & @CRLF)
 EndIf
 
 If WinExists("HP LoadRunner Controller") Then WinClose("HP LoadRunner Controller")
@@ -160,28 +159,29 @@ If WinExists("HP LoadRunner Controller") Then WinClose("HP LoadRunner Controller
 Exit 0
 
 Func SendJSONRunningTest($sEvent, $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
-; Creating the object
-$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
-;~ $oHTTP.SetTimeouts(30000,60000,30000,30000)
-$oHTTP.Open("POST", "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/running-test/" & $sEvent, False)
-$oHTTP.SetRequestHeader("Content-Type", "application/json")
-$oHTTP.SetRequestHeader("Cache-Control", "no-cache")
+	; Creating the object
+	$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
+	;~ $oHTTP.SetTimeouts(30000,60000,30000,30000)
+	$oHTTP.Open("POST", "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/running-test/" & $sEvent, False)
+	$oHTTP.SetRequestHeader("Content-Type", "application/json")
+	$oHTTP.SetRequestHeader("Cache-Control", "no-cache")
 
-$oHTTP.Send('{"testRunId": "' & $sTestrunId & '", ' & _
-			'"dashboardName": "' & $sDashboardName & '", ' & _
-			'"productName": "' & $sProductName & '", ' & _
-			'"buildResultsUrl": "' & $sBuildResultsUrl & '", ' & _
-			'"productRelease": "' & $sProductRelease & '", ' & _
-			'"rampUpPeriod": "' & $nRampupPeriod & '"}')
+	$oHTTP.Send('{"testRunId": "' & $sTestrunId & '", ' & _
+				'"dashboardName": "' & $sDashboardName & '", ' & _
+				'"productName": "' & $sProductName & '", ' & _
+				'"buildResultsUrl": "' & $sBuildResultsUrl & '", ' & _
+				'"productRelease": "' & $sProductRelease & '", ' & _
+				'"rampUpPeriod": "' & $nRampupPeriod & '"}')
 
-; Download the body response if any, and get the server status response code.
-$oReceived = $oHTTP.ResponseText
-$oStatusCode = $oHTTP.Status
+	; Download the body response if any, and get the server status response code.
+	$oReceived = $oHTTP.ResponseText
+	$oStatusCode = $oHTTP.Status
 
-If $oStatusCode <> 200 then
-	ConsoleWriteError("Response status code not 200 OK, but " & $oStatusCode & @CRLF & "Response body: " & @CRLF & $oReceived)
-	Return False
-EndIf
+	If $oStatusCode <> 200 then
+		ConsoleWriteError("Targets-io event response status code not 200 OK, but " & $oStatusCode & @CRLF & "Response body: " & @CRLF & $oReceived)
+		Return False
+	EndIf
+	Return True
 EndFunc ; SendJSONRunningTest
 
 Func LrsScriptPaths($sFile)
