@@ -80,22 +80,32 @@ If $iPid = 0 Or @error Then
 	ConsoleWriteError("Something went wrong starting the scenario file with LoadRunner" & @CRLF)
 	Exit 1
 EndIf
+
 ; wait until timeout
-; TODO: keep alives sturen!
-If Not ProcessWaitClose($iPid, $nTimeout * 60) Then
+$sTestStart = _Now()
+While _DateDiff("n", _Now, $sTestStart) < 1;$nTimeout
+	Sleep(15000) ; keepalive interval
+	SendJSONRunningTest("keepalive", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
+	ConsoleWrite("Sending keepalive event to targets io." & @CRLF)
+	If Not ProcessExists($iPid) Then ExitLoop
+WEnd
+If ProcessExists($iPid) Then
 	ConsoleWriteError("LoadRunner controller took too long to complete scenario. Timeout set at " & $nTimeout & " minutes. " & @CRLF & "Please check if LoadRunner is stalling or set higher timeout value. LoadRunner process, if still running, will be closed now..." & @CRLF)
 	If Not ProcessClose($iPid) Then
 		ConsoleWriteError("Unable to close LoadRunner controller process. Please do so manually." & @CRLF)
 	EndIf
 	Exit 1
 EndIf
+;If Not ProcessWaitClose($iPid, $nTimeout * 60) Then
 
 ; send end event to targets io
 ; TODO: keepalive op termijn verwijderen
-SendJSONRunningTest("keepalive", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
-ConsoleWrite("Sending keepalive event to targets io: ")
-SendJSONRunningTest("end", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
-ConsoleWrite("Sending end event to targets io: ")
+;~ SendJSONRunningTest("keepalive", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
+;~ ConsoleWrite("Sending keepalive event to targets io: ")
+ConsoleWrite("Sending end event to targets io: " & @CRLF)
+If Not SendJSONRunningTest("end", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod) Then
+	ConsoleWriteError("unsuccessful. Test will have status incompleted in targets-io." & @CRLF)
+EndIf
 ; TODO: rv s afvangen en writen
 
 ConsoleWrite("Analyzing results." & @CRLF)
@@ -133,6 +143,10 @@ If ProcessExists("AnalysisUI.exe") Then
 EndIf
 
 ; launching LR2Graphite
+If Not FileExists(@WorkingDir & "\LR2Graphite.exe") Then
+	ConsoleWriteError("Unable to proceed: file LR2Graphite.exe not found in working directory " & @WorkingDir & @CRLF)
+	Exit 1
+EndIf
 ConsoleWrite("Launching LR2Graphite." & @CRLF)
 $ret = RunWait(@WorkingDir & '\LR2Graphite.exe "' & @WorkingDir & '\LRR\LRA\LRA.mdb" 172.21.42.150 2003 -1')
 If $ret <> 0 Or @error Then
@@ -165,7 +179,7 @@ $oReceived = $oHTTP.ResponseText
 $oStatusCode = $oHTTP.Status
 
 If $oStatusCode <> 200 then
-	ConsoleWriteError("Response status code not 200 OK, but " & $oStatusCode & @CRLF)
+	ConsoleWriteError("Response status code not 200 OK, but " & $oStatusCode & @CRLF & "Response body: " & @CRLF & $oReceived)
 	Return False
 EndIf
 EndFunc ; SendJSONRunningTest

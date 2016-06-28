@@ -4334,52 +4334,98 @@ XMLData=<Mediators distribution = "1" enabled= "1" ><Mediator type= "SARM" enabl
 }
 
 {ScenarioSchedulerConfig
-<?xml version="1.0" encoding="utf-16"?>
-<LoadTest>
-  <Schedulers>
-    <CurrentSchedulerId>1</CurrentSchedulerId>
-    <StartMode>
-      <StartModeType>Immediately</StartModeType>
-      <StartModes>
-        <Immediately />
-        <DelayAfterLTStart>0</DelayAfterLTStart>
-        <StartAt>2016-05-18T21:07:28.0706177+02:00</StartAt>
-      </StartModes>
-    </StartMode>
-    <Scheduler ID="1">
-      <Name>Schedule 1</Name>
-      <Manual>
-        <SchedulerType>Global</SchedulerType>
-        <Global>
-          <Scheduling>
-            <IsDefaultScheduler>true</IsDefaultScheduler>
-            <DynamicScheduling>
-              <Run>
-                <StartCondition>
-                  <PrevAction />
-                </StartCondition>
-                <TotalVusersNumber>10</TotalVusersNumber>
-              </Run>
-              <Duration>
-                <StartCondition>
-                  <PrevAction />
-                </StartCondition>
-                <RunFor>120</RunFor>
-              </Duration>
-              <StopAll>
-                <StartCondition>
-                  <PrevAction />
-                </StartCondition>
-              </StopAll>
-            </DynamicScheduling>
-          </Scheduling>
-        </Global>
-        <Groups>
-          <InitAllBeforeStart>false</InitAllBeforeStart>
-        </Groups>
-      </Manual>
-    </Scheduler>
-  </Schedulers>
+<?xml version="1.0" encoding="utf-16"?>
+
+<LoadTest>
+
+  <Schedulers>
+
+    <CurrentSchedulerId>1</CurrentSchedulerId>
+
+    <StartMode>
+
+      <StartModeType>Immediately</StartModeType>
+
+      <StartModes>
+
+        <Immediately />
+
+        <DelayAfterLTStart>0</DelayAfterLTStart>
+
+        <StartAt>2016-05-18T21:07:28.0706177+02:00</StartAt>
+
+      </StartModes>
+
+    </StartMode>
+
+    <Scheduler ID="1">
+
+      <Name>Schedule 1</Name>
+
+      <Manual>
+
+        <SchedulerType>Global</SchedulerType>
+
+        <Global>
+
+          <Scheduling>
+
+            <IsDefaultScheduler>true</IsDefaultScheduler>
+
+            <DynamicScheduling>
+
+              <Run>
+
+                <StartCondition>
+
+                  <PrevAction />
+
+                </StartCondition>
+
+                <TotalVusersNumber>10</TotalVusersNumber>
+
+              </Run>
+
+              <Duration>
+
+                <StartCondition>
+
+                  <PrevAction />
+
+                </StartCondition>
+
+                <RunFor>120</RunFor>
+
+              </Duration>
+
+              <StopAll>
+
+                <StartCondition>
+
+                  <PrevAction />
+
+                </StartCondition>
+
+              </StopAll>
+
+            </DynamicScheduling>
+
+          </Scheduling>
+
+        </Global>
+
+        <Groups>
+
+          <InitAllBeforeStart>false</InitAllBeforeStart>
+
+        </Groups>
+
+      </Manual>
+
+    </Scheduler>
+
+  </Schedulers>
+
 </LoadTest>
 }
 
