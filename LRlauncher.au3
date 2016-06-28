@@ -54,7 +54,6 @@ EndIf
 If FileExists(@WorkingDir & "\LRR\LRA") Then
 	If Not DirMove(@WorkingDir & "\LRR\LRA", @WorkingDir & "\LRR\LRA.old", 1) Then
 		ConsoleWriteError("Old analysis directory detected and unable rename to " & @WorkingDir & "\LRR\LRA.old" & @CRLF & "Locked?" & @CRLF)
-		MsgBox(16, "Error", "Old analysis directory detected and unable rename to " & @WorkingDir & "\LRR\LRA.old" & @CRLF & "Locked?", 5)
 		Exit 1
 	EndIf
 EndIf
@@ -232,7 +231,7 @@ Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
 	; Creating the object
 	$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
 	;~ $oHTTP.SetTimeouts(30000,60000,30000,30000)
-	$oHTTP.Open("GET", "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/testrun/" & $sProductName & "/" & $sDashboardName & "/" & $sTestrunId, False)
+	$oHTTP.Open("GET", "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/testrun/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId), False)
 	$oHTTP.SetRequestHeader("Content-Type", "application/json")
 	$oHTTP.SetRequestHeader("Cache-Control", "no-cache")
 	$oHTTP.Send()
@@ -241,8 +240,8 @@ Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
 ;~ 	ConsoleWrite($sReceived)
 
 	If $nStatusCode <> 200 then
-		ConsoleWriteError("Targets-io event response status code not 200 OK, but " & $nStatusCode & @CRLF & "Response body: " & @CRLF & $sReceived)
-		Return False
+		ConsoleWriteError("Targets-io response status code not 200 OK, but " & $nStatusCode & @CRLF & "Response body: " & @CRLF & $sReceived)
+		SetError(1, 0, "Assertion request failed.")
 	EndIf
 
 	$aBenchmarkResultPreviousOK = _StringBetween($sReceived, '"benchmarkResultPreviousOK":', ',')
@@ -253,12 +252,12 @@ Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
 ;~ 	ConsoleWrite("req: " & $aMeetsRequirement[0] & @CRLF)
 
 	If $aBenchmarkResultPreviousOK[0] = "false" Or $aBenchmarkResultFixedOK[0] = "false" Or $aMeetsRequirement[0] = "false" Then
-		If $aMeetsRequirement[0] = "false" Then $sReturn = "Requirements not met: " & "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/#!/requirements/" & $sProductName & "/" & $sDashboardName & "/" & $sTestrunId & "/failed/" & @CRLF
-		If $aBenchmarkResultPreviousOK[0] = "false" Then $sReturn += "Benchmark with previous test result failed: " & "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/#!/benchmark-previous-build/" & $sProductName & "/" & $sDashboardName & "/" & $sTestrunId & "/failed/" & @CRLF
-		If $aBenchmarkResultFixedOK[0] = "false" Then $sReturn += "Benchmark with fixed baseline failed: " & "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/#!/benchmark-fixed-baseline/" & $sProductName & "/" & $sDashboardName & "/" & $sTestrunId & "/failed/" & @CRLF
+		If $aMeetsRequirement[0] = "false" Then $sReturn = "Requirements not met: " & "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/#!/requirements/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId) & "/failed/" & @CRLF
+		If $aBenchmarkResultPreviousOK[0] = "false" Then $sReturn += "Benchmark with previous test result failed: " & "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/#!/benchmark-previous-build/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId) & "/failed/" & @CRLF
+		If $aBenchmarkResultFixedOK[0] = "false" Then $sReturn += "Benchmark with fixed baseline failed: " & "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/#!/benchmark-fixed-baseline/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId) & "/failed/" & @CRLF
 		ConsoleWrite($sReturn)
-		SetError(1, 0, $sReturn)
+		SetError(2, 0, $sReturn)
 	Else
 		Return True
 	EndIf
-EndFunc ; SendJSONRunningTest
+EndFunc ; AssertionRequest
