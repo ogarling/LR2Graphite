@@ -83,7 +83,7 @@ EndIf
 
 ; wait until timeout
 $sTestStart = _Now()
-While _DateDiff("n", _Now, $sTestStart) < 1;$nTimeout
+While _DateDiff("n", _Now, $sTestStart) < $nTimeout
 	Sleep(15000) ; keepalive interval
 	SendJSONRunningTest("keepalive", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
 	ConsoleWrite("Sending keepalive event to targets io." & @CRLF)
