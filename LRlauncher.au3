@@ -11,6 +11,7 @@
 #AutoIt3Wrapper_Change2CUI=y
 #include <Date.au3>
 #include <Array.au3>
+#include <String.au3>
 
 Const $sIni = StringTrimRight(@ScriptName, 3) & "ini"
 If $CmdLine[0] > 0 Then
@@ -46,7 +47,7 @@ If Not LrsScriptPaths($sScenarioPath) Then
 	ConsoleWriteError("Something went wrong while patching script paths in scenario file " & $sScenarioPath & @CRLF & "Now exiting." & @CRLF)
 	Exit 1
 Else
-	ConsoleWrite("Scenario file " & $sScenarioPath & " patched successfully: script paths have been adapted to current working directory." & @CRLF)
+	ConsoleWrite("Scenario file " & $sScenarioPath & " patched successfully: script paths have been adapted to current working folder." & @CRLF)
 EndIf
 
 ; check if old LRA dir exists and if so, rename it to .old
@@ -156,8 +157,15 @@ If Not SendJSONRunningTest("end", $sProductName, $sDashboardName, $sTestrunId, $
 	ConsoleWriteError("Sending end event unsuccessful: test will have status incompleted in targets-io." & @CRLF)
 EndIf
 
-; return success
-Exit 0
+; assertions
+$ret = AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
+If @error Then
+	ConsoleWriteError($ret)
+	Exit 2 ; failed on assertions
+Else
+	; return success
+	Exit 0
+EndIf
 
 Func SendJSONRunningTest($sEvent, $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
 	; Creating the object
@@ -219,3 +227,38 @@ Func LrsScriptPaths($sFile)
 	EndIf
 	Return True
 EndFunc ; LrsScriptPaths
+
+Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
+	; Creating the object
+	$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
+	;~ $oHTTP.SetTimeouts(30000,60000,30000,30000)
+	$oHTTP.Open("GET", "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/testrun/" & $sProductName & "/" & $sDashboardName & "/" & $sTestrunId, False)
+	$oHTTP.SetRequestHeader("Content-Type", "application/json")
+	$oHTTP.SetRequestHeader("Cache-Control", "no-cache")
+	$oHTTP.Send()
+	$sReceived = $oHTTP.ResponseText
+	$nStatusCode = $oHTTP.Status
+;~ 	ConsoleWrite($sReceived)
+
+	If $nStatusCode <> 200 then
+		ConsoleWriteError("Targets-io event response status code not 200 OK, but " & $nStatusCode & @CRLF & "Response body: " & @CRLF & $sReceived)
+		Return False
+	EndIf
+
+	$aBenchmarkResultPreviousOK = _StringBetween($sReceived, '"benchmarkResultPreviousOK":', ',')
+;~ 	ConsoleWrite("prev: " & $aBenchmarkResultPreviousOK[0] & @CRLF)
+	$aBenchmarkResultFixedOK = _StringBetween($sReceived, '"benchmarkResultFixedOK":', ',')
+;~ 	ConsoleWrite("fixed: " & $aBenchmarkResultFixedOK[0] & @CRLF)
+	$aMeetsRequirement = _StringBetween($sReceived, '"meetsRequirement":', ',')
+;~ 	ConsoleWrite("req: " & $aMeetsRequirement[0] & @CRLF)
+
+	If $aBenchmarkResultPreviousOK[0] = "false" Or $aBenchmarkResultFixedOK[0] = "false" Or $aMeetsRequirement[0] = "false" Then
+		If $aMeetsRequirement[0] = "false" Then $sReturn = "Requirements not met: " & "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/#!/requirements/" & $sProductName & "/" & $sDashboardName & "/" & $sTestrunId & "/failed/" & @CRLF
+		If $aBenchmarkResultPreviousOK[0] = "false" Then $sReturn += "Benchmark with previous test result failed: " & "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/#!/benchmark-previous-build/" & $sProductName & "/" & $sDashboardName & "/" & $sTestrunId & "/failed/" & @CRLF
+		If $aBenchmarkResultFixedOK[0] = "false" Then $sReturn += "Benchmark with fixed baseline failed: " & "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/#!/benchmark-fixed-baseline/" & $sProductName & "/" & $sDashboardName & "/" & $sTestrunId & "/failed/" & @CRLF
+		ConsoleWrite($sReturn)
+		SetError(1, 0, $sReturn)
+	Else
+		Return True
+	EndIf
+EndFunc ; SendJSONRunningTest
