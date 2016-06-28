@@ -77,7 +77,7 @@ If WinExists("HP LoadRunner Controller") Then WinClose("HP LoadRunner Controller
 ConsoleWrite("Running of LoadRunner scenario started." & @CRLF)
 $iPid = Run($sLRpath & ' -Run -InvokeAnalysis -TestPath "' & $sScenarioPath & '" -ResultName "' & @WorkingDir & '\LRR"')
 If $iPid = 0 Or @error Then
-	ConsoleWriteError("Something went wrong starting the scenario file with LoadRunner" & @CRLF)
+	ConsoleWriteError("Something went wrong starting the scenario file with LoadRunner. Now exiting." & @CRLF)
 	Exit 1
 EndIf
 
@@ -97,12 +97,6 @@ If ProcessExists($iPid) Then
 		ConsoleWriteError("Unable to close LoadRunner controller process. Please do so manually." & @CRLF)
 	EndIf
 	Exit 1
-EndIf
-
-; send end event to targets-io
-ConsoleWrite("Sending end event to targets io." & @CRLF)
-If Not SendJSONRunningTest("end", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod) Then
-	ConsoleWriteError("Sending end event unsuccessful: test will have status incompleted in targets-io." & @CRLF)
 EndIf
 
 ConsoleWrite("Analyzing results." & @CRLF)
@@ -150,10 +144,17 @@ If $ret <> 0 Or @error Then
 	ConsoleWriteError("Something went wrong during LR2Graphite execution. Now exiting." & @CRLF)
 	Exit 1
 Else
-	ConsoleWrite("LoadRunner metrics successfully imported into Graphite!" & @CRLF)
+	ConsoleWrite("LoadRunner metrics successfully imported into Graphite." & @CRLF)
 EndIf
 
 If WinExists("HP LoadRunner Controller") Then WinClose("HP LoadRunner Controller")
+
+; send end event to targets-io
+; has to be delayed otherwise targets-io is not able to calculate benchmark results
+ConsoleWrite("Sending end event to targets io." & @CRLF)
+If Not SendJSONRunningTest("end", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod) Then
+	ConsoleWriteError("Sending end event unsuccessful: test will have status incompleted in targets-io." & @CRLF)
+EndIf
 
 ; return success
 Exit 0
