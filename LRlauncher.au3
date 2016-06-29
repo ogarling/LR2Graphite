@@ -35,10 +35,20 @@ Else
 	Exit 1
 EndIf
 
+;~ for debugging only! comment out Exit 1 above
+;~ $sScenarioPath = "nano.lrs"
+;~ $sProductName = IniRead($sIni, "targets-io", "ProductName", "LOADRUNNER")
+;~ $sDashboardName = IniRead($sIni, "targets-io", "DashboardName", "LOAD")
+;~ $sTestrunId = "LoadRunner-" & StringReplace(_DateTimeFormat(_NowCalc(), 2), "/", "-") & "-" & Random(1,99999,1)
+;~ $sBuildResultsUrl = ""
+;~ ============================================
+
 $sLRpath = IniRead($sIni, "LoadRunner", "LRpath", "C:\Program Files (x86)\HP\LoadRunner\bin\wlrun.exe")
 $nTimeout = IniRead($sIni, "LoadRunner", "TimeoutDefault", "90")
+$sHost = IniRead($sIni, "targets-io", "Host", "172.21.42.150")
+$nPort = IniRead($sIni, "targets-io", "Port", "3000")
 $sGraphiteHost = IniRead($sIni, "Graphite", "GraphiteHost", "172.21.42.150")
-$nGraphitePort = IniRead($sIni, "Graphite", "GraphitePort", "3000")
+$nGraphitePort = IniRead($sIni, "Graphite", "GraphitePort", "2003")
 $sProductRelease = IniRead($sIni, "targets-io", "ProductRelease", "1.0")
 $nRampupPeriod = IniRead($sIni, "targets-io", "RampupPeriod", "10")
 $nTimeZoneOffset = IniRead($sIni, "LR2Graphite", "TimeZoneOffset", "-1")
@@ -62,7 +72,7 @@ EndIf
 $nRnd = Random(1,99999999,1)
 ConsoleWrite("Sending start event to targets-io: ")
 ; TODO: return value afvangen
-SendJSONRunningTest("start", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
+SendJSONRunningTest("start", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod)
 ConsoleWrite("successful" & @CRLF)
 
 ; check and run LoadRunner controller
@@ -87,7 +97,7 @@ ConsoleWrite("Sending keepalive events to targets-io during test: ")
 While _DateDiff("s", $sTestStart, _NowCalc()) < $nTimeout * 60
 	;ConsoleWrite(_DateDiff("s", $sTestStart, _NowCalc()) & @CRLF)
 	Sleep(15000) ; keepalive interval
-	SendJSONRunningTest("keepalive", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
+	SendJSONRunningTest("keepalive", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod)
 	ConsoleWrite(".")
 	If Not ProcessExists($iPid) Then ExitLoop
 WEnd
@@ -140,7 +150,7 @@ If Not FileExists(@WorkingDir & "\LR2Graphite.exe") Then
 	Exit 1
 EndIf
 ConsoleWrite("Launching LR2Graphite." & @CRLF)
-$ret = RunWait(@WorkingDir & '\LR2Graphite.exe "' & @WorkingDir & '\LRR\LRA\LRA.mdb" 172.21.42.150 2003 -1')
+$ret = RunWait(@WorkingDir & '\LR2Graphite.exe "' & @WorkingDir & '\LRR\LRA\LRA.mdb" ' & $sGraphiteHost & ' ' & $nGraphitePort & ' ' & $nTimeZoneOffset)
 If $ret <> 0 Or @error Then
 	ConsoleWriteError("Something went wrong during LR2Graphite execution. Now exiting." & @CRLF)
 	Exit 2
@@ -153,7 +163,7 @@ If WinExists("HP LoadRunner Controller") Then WinClose("HP LoadRunner Controller
 ; send end event to targets-io
 ; has to be delayed otherwise targets-io is not able to calculate benchmark results
 ConsoleWrite("Sending end event to targets-io." & @CRLF)
-If Not SendJSONRunningTest("end", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod) Then
+If Not SendJSONRunningTest("end", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod) Then
 	ConsoleWriteError("Sending end event unsuccessful: test will have status incompleted in targets-io." & @CRLF)
 EndIf
 
@@ -166,11 +176,11 @@ Else
 	Exit 0
 EndIf
 
-Func SendJSONRunningTest($sEvent, $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
+Func SendJSONRunningTest($sEvent, $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod)
 	; Creating the object
 	$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
 	;~ $oHTTP.SetTimeouts(30000,60000,30000,30000)
-	$oHTTP.Open("POST", "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/running-test/" & $sEvent, False)
+	$oHTTP.Open("POST", "http://" & $sHost & ":" & $nPort & "/running-test/" & $sEvent, False)
 	$oHTTP.SetRequestHeader("Content-Type", "application/json")
 	$oHTTP.SetRequestHeader("Cache-Control", "no-cache")
 
@@ -237,7 +247,7 @@ Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
 	; Creating the object
 	$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
 	;~ $oHTTP.SetTimeouts(30000,60000,30000,30000)
-	$oHTTP.Open("GET", "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/testrun/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId), False)
+	$oHTTP.Open("GET", "http://" & $sHost & ":" & $nPort & "/testrun/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId), False)
 	$oHTTP.SetRequestHeader("Content-Type", "application/json")
 	$oHTTP.SetRequestHeader("Cache-Control", "no-cache")
 	$oHTTP.Send()
