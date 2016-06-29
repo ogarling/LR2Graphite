@@ -24,7 +24,7 @@ If $CmdLine[0] > 0 Then
 	Else ; standalone mode
 		$sProductName = IniRead($sIni, "targets-io", "ProductName", "LOADRUNNER")
 		$sDashboardName = IniRead($sIni, "targets-io", "DashboardName", "LOAD")
-		$sTestrunId = "LoadRunner-" & StringReplace(_DateTimeFormat(_NowCalc(), 2), "/", "-") & "-" & Random(1,99999,1)
+		$sTestrunId = "LOADRUNNER-" & StringReplace(_DateTimeFormat(_NowCalc(), 2), "/", "-") & "-" & Random(1,99999,1)
 		$sBuildResultsUrl = ""
 	EndIf
 Else
@@ -69,11 +69,12 @@ If FileExists(@WorkingDir & "\LRR\LRA") Then
 EndIf
 
 ; send start event to targets-io
-$nRnd = Random(1,99999999,1)
-ConsoleWrite("Sending start event to targets-io: ")
-; TODO: return value afvangen
-SendJSONRunningTest("start", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod)
-ConsoleWrite("successful" & @CRLF)
+ConsoleWrite("Sending start event to targets-io. ")
+If Not SendJSONRunningTest("start", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod) Then
+	ConsoleWriteError("Sending end event unsuccessful: test will have status incompleted in targets-io." & @CRLF)
+Else
+	ConsoleWrite("successful" & @CRLF)
+EndIf
 
 ; check and run LoadRunner controller
 If ProcessExists("wlrun.exe") Then
@@ -95,8 +96,7 @@ EndIf
 $sTestStart = _NowCalc()
 ConsoleWrite("Sending keepalive events to targets-io during test: ")
 While _DateDiff("s", $sTestStart, _NowCalc()) < $nTimeout * 60
-	;ConsoleWrite(_DateDiff("s", $sTestStart, _NowCalc()) & @CRLF)
-	Sleep(15000) ; keepalive interval
+	Sleep(15000) ; keepalive interval 15sec by default
 	SendJSONRunningTest("keepalive", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod)
 	ConsoleWrite(".")
 	If Not ProcessExists($iPid) Then ExitLoop
@@ -153,15 +153,14 @@ ConsoleWrite("Launching LR2Graphite." & @CRLF)
 $ret = RunWait(@WorkingDir & '\LR2Graphite.exe "' & @WorkingDir & '\LRR\LRA\LRA.mdb" ' & $sGraphiteHost & ' ' & $nGraphitePort & ' ' & $nTimeZoneOffset)
 If $ret <> 0 Or @error Then
 	ConsoleWriteError("Something went wrong during LR2Graphite execution. Now exiting." & @CRLF)
-	Exit 2
+	Exit 2 ; errorlevel 2 = LR2Graphite
 Else
 	ConsoleWrite("LoadRunner metrics successfully imported into Graphite." & @CRLF)
 EndIf
 
 If WinExists("HP LoadRunner Controller") Then WinClose("HP LoadRunner Controller")
 
-; send end event to targets-io
-; has to be delayed otherwise targets-io is not able to calculate benchmark results
+; send end event to targets-io (at this point, otherwise if sooner targets-io is not able to calculate benchmark results)
 ConsoleWrite("Sending end event to targets-io." & @CRLF)
 If Not SendJSONRunningTest("end", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod) Then
 	ConsoleWriteError("Sending end event unsuccessful: test will have status incompleted in targets-io." & @CRLF)
@@ -170,10 +169,9 @@ EndIf
 ; assertions
 If Not AssertionRequest($sProductName, $sDashboardName, $sTestrunId) Then
 	ConsoleWriteError("Failed on assertions." & @CRLF)
-	Exit 3
+	Exit 3 ; errorlevel 3 = assertions
 Else
-	; return success
-	Exit 0
+	Exit 0 ; return success
 EndIf
 
 Func SendJSONRunningTest($sEvent, $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod)
@@ -196,7 +194,7 @@ Func SendJSONRunningTest($sEvent, $sProductName, $sDashboardName, $sTestrunId, $
 	$oStatusCode = $oHTTP.Status
 
 	If $oStatusCode <> 200 then
-		ConsoleWriteError("Targets-io event response status code not 200 OK, but " & $oStatusCode & @CRLF & "Response body: " & @CRLF & $oReceived)
+		ConsoleWriteError("Targets-io event response status code not 200 OK, but " & $oStatusCode & @CRLF & "Response body: " & @CRLF & $oReceived & @CRLF)
 		Return False
 	EndIf
 	Return True
@@ -253,7 +251,6 @@ Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
 	$oHTTP.Send()
 	$sReceived = $oHTTP.ResponseText
 	$nStatusCode = $oHTTP.Status
-;~ 	ConsoleWrite($sReceived)
 
 	If $nStatusCode <> 200 then
 		ConsoleWriteError("Targets-io response status code not 200 OK, but " & $nStatusCode & @CRLF & "Response body: " & @CRLF & $sReceived)
