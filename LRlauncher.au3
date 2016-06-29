@@ -82,9 +82,10 @@ If $iPid = 0 Or @error Then
 EndIf
 
 ; wait until timeout
-$sTestStart = _Now()
+$sTestStart = _NowCalc()
 ConsoleWrite("Sending keepalive events to targets-io during test: ")
-While _DateDiff("n", _Now, $sTestStart) < $nTimeout
+While _DateDiff("s", $sTestStart, _NowCalc()) < $nTimeout * 60
+	;ConsoleWrite(_DateDiff("s", $sTestStart, _NowCalc()) & @CRLF)
 	Sleep(15000) ; keepalive interval
 	SendJSONRunningTest("keepalive", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod)
 	ConsoleWrite(".")
@@ -142,7 +143,7 @@ ConsoleWrite("Launching LR2Graphite." & @CRLF)
 $ret = RunWait(@WorkingDir & '\LR2Graphite.exe "' & @WorkingDir & '\LRR\LRA\LRA.mdb" 172.21.42.150 2003 -1')
 If $ret <> 0 Or @error Then
 	ConsoleWriteError("Something went wrong during LR2Graphite execution. Now exiting." & @CRLF)
-	Exit 1
+	Exit 2
 Else
 	ConsoleWrite("LoadRunner metrics successfully imported into Graphite." & @CRLF)
 EndIf
@@ -151,16 +152,15 @@ If WinExists("HP LoadRunner Controller") Then WinClose("HP LoadRunner Controller
 
 ; send end event to targets-io
 ; has to be delayed otherwise targets-io is not able to calculate benchmark results
-ConsoleWrite("Sending end event to targets io." & @CRLF)
+ConsoleWrite("Sending end event to targets-io." & @CRLF)
 If Not SendJSONRunningTest("end", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sGraphiteHost, $nGraphitePort, $sProductRelease, $nRampupPeriod) Then
 	ConsoleWriteError("Sending end event unsuccessful: test will have status incompleted in targets-io." & @CRLF)
 EndIf
 
 ; assertions
-$ret = AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
-If @error Then
-	ConsoleWriteError($ret)
-	Exit 2 ; failed on assertions
+If Not AssertionRequest($sProductName, $sDashboardName, $sTestrunId) Then
+	ConsoleWriteError("Failed on assertions." & @CRLF)
+	Exit 3
 Else
 	; return success
 	Exit 0
@@ -209,6 +209,12 @@ Func LrsScriptPaths($sFile)
 		If @error = -1 Then ExitLoop ; when EOF is reached
 		If StringRight($sLine, 3) = "usr" Then
 			$aPath = StringSplit($sLine, "\")
+			If Not FileExists(@WorkingDir & "\" & $aPath[$aPath[0] - 1] & "\" & $aPath[$aPath[0]]) Then
+				ConsoleWriteError("Error: script found in scenario file " & $sFile & " does not exist in location: " & @WorkingDir & "\" & $aPath[$aPath[0] - 1] & "\" & $aPath[$aPath[0]] & @CRLF)
+				FileClose($hFile)
+				FileClose($hFileTmp)
+				Return False
+			EndIf
 			FileWriteLine($hFileTmp, "Path=" & @WorkingDir & "\" & $aPath[$aPath[0] - 1] & "\" & $aPath[$aPath[0]])
 		Else
 			FileWriteLine($hFileTmp, $sLine)
@@ -256,7 +262,7 @@ Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
 		If $aBenchmarkResultPreviousOK[0] = "false" Then $sReturn += "Benchmark with previous test result failed: " & "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/#!/benchmark-previous-build/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId) & "/failed/" & @CRLF
 		If $aBenchmarkResultFixedOK[0] = "false" Then $sReturn += "Benchmark with fixed baseline failed: " & "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/#!/benchmark-fixed-baseline/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId) & "/failed/" & @CRLF
 		ConsoleWrite($sReturn)
-		SetError(2, 0, $sReturn)
+		Return False
 	Else
 		Return True
 	EndIf
