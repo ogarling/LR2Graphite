@@ -3,7 +3,7 @@
 
 ### Why?
 When using LoadRunner in combination with another load test tool like Gatling, JMeter, etc. it would be nice to unify performance test metrics like response time statistics into a single datasource like Graphite.  
-Works excellent in combination with [targets io](https://github.com/dmoll1974/targets-io) tool.
+Works excellent in combination with [targets-io](https://github.com/dmoll1974/targets-io) tool.
 
 ### What?
 By using an [AutoIt](https://www.autoitscript.com/site/) script or executable the LoadRunner analysis MS Access database is being queried and the results are exported into Graphite.
@@ -36,6 +36,8 @@ e.g. LR2Graphite.exe "%WORKSPACE%" 123.123.123.123 2003 0
 
 
 ### Prerequisites
-Analysed LoadRunner testrun with an MDB file. Note: do not select OUTPUT.MDB  
+- Analysed LoadRunner testrun with an MDB file. Note: do not select OUTPUT.MDB  
+- Graphite instance to export metrics to
+
 OS: Windows  
 AutoIt for editing code and debugging.  
