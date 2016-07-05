@@ -69,7 +69,7 @@ If FileExists(@WorkingDir & "\LRR\LRA") Then
 EndIf
 
 ; send start event to targets-io
-ConsoleWrite("Sending start event to targets-io. ")
+ConsoleWrite("Sending start event to targets-io: ")
 If Not SendJSONRunningTest("start", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod) Then
 	ConsoleWriteError("Sending end event unsuccessful: test will have status incompleted in targets-io." & @CRLF)
 Else
