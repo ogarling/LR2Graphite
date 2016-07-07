@@ -58,4 +58,4 @@ Tool for creating a performance test pipeline:
 - running LR2Graphite to export metrics to Graphite (so implicitely to targets-io)
 - validate requirements of test result via targets-io  
 
-LRlauncher is described in more detail in this Wiki.
+LRlauncher is described in more detail in this [Wiki](https://github.com/ogarling/LR2Graphite/wiki).
