@@ -14,28 +14,29 @@
 #include <String.au3>
 
 Const $sIni = StringTrimRight(@ScriptName, 3) & "ini"
-If $CmdLine[0] > 0 Then
+If $CmdLine[0] = 6 Then ; Jenkins mode!
 	$sScenarioPath = $CmdLine[1]
-	If $CmdLine[0] = 5 Then ; Jenkins mode!
-		$sProductName = $CmdLine[2]
-		$sDashboardName = $CmdLine[3]
-		$sTestrunId = $CmdLine[4]
-		$sBuildResultsUrl = $CmdLine[5]
-	Else ; standalone mode
-		$sProductName = IniRead($sIni, "targets-io", "ProductName", "LOADRUNNER")
-		$sDashboardName = IniRead($sIni, "targets-io", "DashboardName", "LOAD")
-		$sTestrunId = "LOADRUNNER-" & StringReplace(_DateTimeFormat(_NowCalc(), 2), "/", "-") & "-" & Random(1,99999,1)
-		$sBuildResultsUrl = ""
-	EndIf
-Else
-	ConsoleWriteError("Please provide at least one command line option argument: the path to the LoadRunner scenario file to be used." & @CRLF & @CRLF)
+	$sProductName = $CmdLine[2]
+	$sDashboardName = $CmdLine[3]
+	$sTestrunId = $CmdLine[4]
+	$sBuildResultsUrl = $CmdLine[5]
+	$sRunMode = $CmdLine[6]
+ElseIf $CmdLine[0] = 1 Then ; standalone mode
+	$sScenarioPath = $CmdLine[1]
+	$sProductName = IniRead($sIni, "targets-io", "ProductName", "LOADRUNNER")
+	$sDashboardName = IniRead($sIni, "targets-io", "DashboardName", "LOAD")
+	$sTestrunId = "LOADRUNNER-" & StringReplace(_DateTimeFormat(_NowCalc(), 2), "/", "-") & "-" & Random(1, 99999, 1)
+	$sBuildResultsUrl = ""
+	$sRunMode = "standalone"
+Else ; invalid amount of command line option arguments entered
+	ConsoleWriteError("Please provide one or six command line option argument(s):" & @CRLF & @CRLF)
 	ConsoleWriteError("LRlauncher.exe <path to scenario file>" & @CRLF & @CRLF & "or Jenkins mode:" & @CRLF)
-	ConsoleWriteError("LRlauncher.exe <path to scenario file> <ProductName> <DashboardName> <TestrunId> <BuildResultsUrl>" & @CRLF & @CRLF)
+	ConsoleWriteError("LRlauncher.exe <path to scenario file> <ProductName> <DashboardName> <TestrunId> <BuildResultsUrl> <standalone|parallel>" & @CRLF & @CRLF)
 	ConsoleWriteError("Please note: to be used script directories must be present in working directory from where LRlauncher is executed." & @CRLF)
 	Exit 1
 EndIf
 
-;~ for debugging only! comment out Exit 1 above
+;~ for debugging purposes only! comment out Exit 1 above
 ;~ $sScenarioPath = "nano.lrs"
 ;~ $sProductName = IniRead($sIni, "targets-io", "ProductName", "LOADRUNNER")
 ;~ $sDashboardName = IniRead($sIni, "targets-io", "DashboardName", "LOAD")
@@ -68,12 +69,14 @@ If FileExists(@WorkingDir & "\LRR\LRA") Then
 	EndIf
 EndIf
 
-; send start event to targets-io
-ConsoleWrite("Sending start event to targets-io: ")
-If Not SendJSONRunningTest("start", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod) Then
-	ConsoleWriteError("Sending end event unsuccessful: test will have status incompleted in targets-io." & @CRLF)
-Else
-	ConsoleWrite("successful" & @CRLF)
+; send start event to targets-io when run mode is not parallel
+If $sRunMode <> "parallel" Then
+	ConsoleWrite("Sending start event to targets-io: ")
+	If Not SendJSONRunningTest("start", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod) Then
+		ConsoleWriteError("Sending end event unsuccessful: test will have status incompleted in targets-io." & @CRLF)
+	Else
+		ConsoleWrite("successful" & @CRLF)
+	EndIf
 EndIf
 
 ; check and run LoadRunner controller
@@ -97,8 +100,10 @@ $sTestStart = _NowCalc()
 ConsoleWrite("Sending keepalive events to targets-io during test: ")
 While _DateDiff("s", $sTestStart, _NowCalc()) < $nTimeout * 60
 	Sleep(15000) ; keepalive interval 15sec by default
-	SendJSONRunningTest("keepalive", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod)
-	ConsoleWrite(".")
+	If $sRunMode <> "parallel" Then
+		SendJSONRunningTest("keepalive", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod)
+		ConsoleWrite(".")
+	EndIf
 	If Not ProcessExists($iPid) Then ExitLoop
 WEnd
 ConsoleWrite(@CRLF)
@@ -140,7 +145,7 @@ If ProcessExists("AnalysisUI.exe") Then
 	ConsoleWriteError("LoadRunner analysis process detected, now closing." & @CRLF)
 	If Not ProcessClose("AnalysisUI.exe") Then
 		ConsoleWrite("LoadRunner analysis process could not be closed. Now exiting.")
-		Exit 1  ; continuation not possible because of potential file lock for LR2Graphite
+		Exit 1 ; continuation not possible because of potential file lock for LR2Graphite
 	EndIf
 EndIf
 
@@ -161,44 +166,48 @@ EndIf
 If WinExists("HP LoadRunner Controller") Then WinClose("HP LoadRunner Controller")
 
 ; send end event to targets-io (at this point, otherwise if sooner targets-io is not able to calculate benchmark results)
-ConsoleWrite("Sending end event to targets-io." & @CRLF)
-If Not SendJSONRunningTest("end", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod) Then
-	ConsoleWriteError("Sending end event unsuccessful: test will have status incompleted in targets-io." & @CRLF)
+If $sRunMode <> "parallel" Then
+	ConsoleWrite("Sending end event to targets-io." & @CRLF)
+	If Not SendJSONRunningTest("end", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod) Then
+		ConsoleWriteError("Sending end event unsuccessful: test will have status incompleted in targets-io." & @CRLF)
+	EndIf
 EndIf
 
 ; assertions
-If Not AssertionRequest($sProductName, $sDashboardName, $sTestrunId) Then
-	ConsoleWriteError("Failed on assertions." & @CRLF)
-	Exit 3 ; errorlevel 3 = assertions
-Else
-	Exit 0 ; return success
+If $sRunMode <> "parallel" Then
+	If Not AssertionRequest($sProductName, $sDashboardName, $sTestrunId) Then
+		ConsoleWriteError("Failed on assertions." & @CRLF)
+		Exit 3 ; errorlevel 3 = assertions
+	Else
+		Exit 0 ; return success
+	EndIf
 EndIf
 
 Func SendJSONRunningTest($sEvent, $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod)
 	; Creating the object
 	$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
-	;~ $oHTTP.SetTimeouts(30000,60000,30000,30000)
+;~ $oHTTP.SetTimeouts(30000,60000,30000,30000)
 	$oHTTP.Open("POST", "http://" & $sHost & ":" & $nPort & "/running-test/" & $sEvent, False)
 	$oHTTP.SetRequestHeader("Content-Type", "application/json")
 	$oHTTP.SetRequestHeader("Cache-Control", "no-cache")
 
 	$oHTTP.Send('{"testRunId": "' & $sTestrunId & '", ' & _
-				'"dashboardName": "' & $sDashboardName & '", ' & _
-				'"productName": "' & $sProductName & '", ' & _
-				'"buildResultsUrl": "' & $sBuildResultsUrl & '", ' & _
-				'"productRelease": "' & $sProductRelease & '", ' & _
-				'"rampUpPeriod": "' & $nRampupPeriod & '"}')
+			'"dashboardName": "' & $sDashboardName & '", ' & _
+			'"productName": "' & $sProductName & '", ' & _
+			'"buildResultsUrl": "' & $sBuildResultsUrl & '", ' & _
+			'"productRelease": "' & $sProductRelease & '", ' & _
+			'"rampUpPeriod": "' & $nRampupPeriod & '"}')
 
 	; Download the body response if any, and get the server status response code.
 	$oReceived = $oHTTP.ResponseText
 	$oStatusCode = $oHTTP.Status
 
-	If $oStatusCode <> 200 then
+	If $oStatusCode <> 200 Then
 		ConsoleWriteError("Targets-io event response status code not 200 OK, but " & $oStatusCode & @CRLF & "Response body: " & @CRLF & $oReceived & @CRLF)
 		Return False
 	EndIf
 	Return True
-EndFunc ; SendJSONRunningTest
+EndFunc   ;==>SendJSONRunningTest
 
 Func LrsScriptPaths($sFile)
 	$hFile = FileOpen($sFile, 0)
@@ -239,12 +248,12 @@ Func LrsScriptPaths($sFile)
 		Return False
 	EndIf
 	Return True
-EndFunc ; LrsScriptPaths
+EndFunc   ;==>LrsScriptPaths
 
 Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
 	; Creating the object
 	$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
-	;~ $oHTTP.SetTimeouts(30000,60000,30000,30000)
+;~ $oHTTP.SetTimeouts(30000,60000,30000,30000)
 	$oHTTP.Open("GET", "http://" & $sHost & ":" & $nPort & "/testrun/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId), False)
 	$oHTTP.SetRequestHeader("Content-Type", "application/json")
 	$oHTTP.SetRequestHeader("Cache-Control", "no-cache")
@@ -252,7 +261,7 @@ Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
 	$sReceived = $oHTTP.ResponseText
 	$nStatusCode = $oHTTP.Status
 
-	If $nStatusCode <> 200 then
+	If $nStatusCode <> 200 Then
 		ConsoleWriteError("Targets-io response status code not 200 OK, but " & $nStatusCode & @CRLF & "Response body: " & @CRLF & $sReceived)
 		SetError(1, 0, "Assertion request failed.")
 	EndIf
@@ -273,4 +282,4 @@ Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
 	Else
 		Return True
 	EndIf
-EndFunc ; AssertionRequest
+EndFunc   ;==>AssertionRequest
