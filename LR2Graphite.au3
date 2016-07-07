@@ -177,22 +177,28 @@ Func ProcessBuckets ($aBuckets, ByRef $sTransactionName, ByRef $sScript)
 EndFunc
 
 Func ExportToGraphite ($sMetricPath, $nMin, $nAvg, $nMax, $nPerc, $nTps, $nEpoch)
-	If $iSocket = Null Then $iSocket = TCPConnect($sGraphiteHost, $nGraphitePort)
-		$ret = TCPSend($iSocket, $sMetricPath & ".min " & $nMin & " " & $nEpoch & @LF)
-		If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".min" & @CRLF)
-		If Not @error Then $nPayloadBytes += $ret
-		$ret = TCPSend($iSocket, $sMetricPath & ".avg " & $nAvg & " " & $nEpoch & @LF)
-		If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".avg" & @CRLF)
-		If Not @error Then $nPayloadBytes += $ret
-		$ret = TCPSend($iSocket, $sMetricPath & ".max " & $nMax & " " & $nEpoch & @LF)
-		If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".min" & @CRLF)
-		If Not @error Then $nPayloadBytes += $ret
-		$ret = TCPSend($iSocket, $sMetricPath & ".perc " & $nPerc & " " & $nEpoch & @LF)
-		If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".perc" & @CRLF)
-		If Not @error Then $nPayloadBytes += $ret
-		$ret = TCPSend($iSocket, $sMetricPath & ".tps " & $nTps & " " & $nEpoch & @LF)
-		If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".tps" & @CRLF)
-		If Not @error Then $nPayloadBytes += $ret
+	If $iSocket = Null Then
+		$iSocket = TCPConnect($sGraphiteHost, $nGraphitePort)
+		If $iSocket <= 0 Or @error Then
+			ConsoleWriteError("Error occurred while connecting to Graphite host. Please check hostname/IP adrress and port number." & @CRLF)
+			Exit
+		EndIf
+	EndIf
+	$ret = TCPSend($iSocket, $sMetricPath & ".min " & $nMin & " " & $nEpoch & @LF)
+	If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".min" & @CRLF)
+	If Not @error Then $nPayloadBytes += $ret
+	$ret = TCPSend($iSocket, $sMetricPath & ".avg " & $nAvg & " " & $nEpoch & @LF)
+	If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".avg" & @CRLF)
+	If Not @error Then $nPayloadBytes += $ret
+	$ret = TCPSend($iSocket, $sMetricPath & ".max " & $nMax & " " & $nEpoch & @LF)
+	If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".min" & @CRLF)
+	If Not @error Then $nPayloadBytes += $ret
+	$ret = TCPSend($iSocket, $sMetricPath & ".perc " & $nPerc & " " & $nEpoch & @LF)
+	If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".perc" & @CRLF)
+	If Not @error Then $nPayloadBytes += $ret
+	$ret = TCPSend($iSocket, $sMetricPath & ".tps " & $nTps & " " & $nEpoch & @LF)
+	If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".tps" & @CRLF)
+	If Not @error Then $nPayloadBytes += $ret
 
 	If $nPayloadBytes > 256000 Then  ; after 250KB use new TCP connection
 		$ret = TCPCloseSocket($iSocket)
