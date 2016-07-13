@@ -114,6 +114,8 @@ Sleep(3000)
 
 TCPShutdown()
 
+Exit 0
+
 Func ProcessScript ($aMeasurements, ByRef $sScript)
 	TrayTip("", "Now processing script " & $sScript, 1)
 	ConsoleWrite(@CRLF & "Now processing script " & $sScript & ":" & @CRLF & @CRLF)
@@ -181,7 +183,7 @@ Func ExportToGraphite ($sMetricPath, $nMin, $nAvg, $nMax, $nPerc, $nTps, $nEpoch
 		$iSocket = TCPConnect($sGraphiteHost, $nGraphitePort)
 		If $iSocket <= 0 Or @error Then
 			ConsoleWriteError("Error occurred while connecting to Graphite host. Please check hostname/IP adrress and port number." & @CRLF)
-			Exit
+			Exit 1
 		EndIf
 	EndIf
 	$ret = TCPSend($iSocket, $sMetricPath & ".min " & $nMin & " " & $nEpoch & @LF)
@@ -208,7 +210,7 @@ Func ExportToGraphite ($sMetricPath, $nMin, $nAvg, $nMax, $nPerc, $nTps, $nEpoch
 			ConsoleWriteError("TCPClose errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & @CRLF)
 			$ret = TCPShutdown()
 			If @error Then ConsoleWriteError("TCPShutdown errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & @CRLF)
-			Exit
+			Exit 1
 		EndIf
 	EndIf
 EndFunc ; ExportToGraphite
