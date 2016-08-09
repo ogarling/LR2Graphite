@@ -14,24 +14,22 @@
 #include <String.au3>
 
 Const $sIni = StringTrimRight(@ScriptName, 3) & "ini"
-If $CmdLine[0] = 6 Then ; Jenkins mode!
+If $CmdLine[0] = 5 Then ; Jenkins mode!
 	$sScenarioPath = $CmdLine[1]
-	$sProductName = $CmdLine[2]
-	$sDashboardName = $CmdLine[3]
-	$sTestrunId = $CmdLine[4]
-	$sBuildResultsUrl = $CmdLine[5]
-	$sRunMode = $CmdLine[6]
+	$sDashboardName = $CmdLine[2]
+	$sTestrunId = $CmdLine[3]
+	$sBuildResultsUrl = $CmdLine[4]
+	$sRunMode = $CmdLine[5]
 ElseIf $CmdLine[0] = 1 Then ; standalone mode
 	$sScenarioPath = $CmdLine[1]
-	$sProductName = IniRead($sIni, "targets-io", "ProductName", "LOADRUNNER")
 	$sDashboardName = IniRead($sIni, "targets-io", "DashboardName", "LOAD")
 	$sTestrunId = "LOADRUNNER-" & StringReplace(_DateTimeFormat(_NowCalc(), 2), "/", "-") & "-" & Random(1, 99999, 1)
 	$sBuildResultsUrl = ""
 	$sRunMode = "standalone"
 Else ; invalid amount of command line option arguments entered
-	ConsoleWriteError("Please provide one or six command line option argument(s):" & @CRLF & @CRLF)
+	ConsoleWriteError("Please provide one or five command line option argument(s):" & @CRLF & @CRLF)
 	ConsoleWriteError("LRlauncher.exe <path to scenario file>" & @CRLF & @CRLF & "or Jenkins mode:" & @CRLF)
-	ConsoleWriteError("LRlauncher.exe <path to scenario file> <ProductName> <DashboardName> <TestrunId> <BuildResultsUrl> <standalone|parallel>" & @CRLF & @CRLF)
+	ConsoleWriteError("LRlauncher.exe <path to scenario file> <DashboardName> <TestrunId> <BuildResultsUrl> <standalone|parallel>" & @CRLF & @CRLF)
 	ConsoleWriteError("Please note: to be used script directories must be present in working directory from where LRlauncher is executed." & @CRLF)
 	Exit 1
 EndIf
@@ -50,6 +48,7 @@ $sHost = IniRead($sIni, "targets-io", "Host", "targets-io.klm.com")
 $nPort = IniRead($sIni, "targets-io", "Port", "10003")
 $sGraphiteHost = IniRead($sIni, "Graphite", "GraphiteHost", "172.21.42.178")
 $nGraphitePort = IniRead($sIni, "Graphite", "GraphitePort", "2113")
+$sProductName = IniRead($sIni, "targets-io", "ProductName", "LOADRUNNER")
 $sProductRelease = IniRead($sIni, "targets-io", "ProductRelease", "1.0")
 $nRampupPeriod = IniRead($sIni, "targets-io", "RampupPeriod", "10")
 $nTimeZoneOffset = IniRead($sIni, "LR2Graphite", "TimeZoneOffset", "-1")
