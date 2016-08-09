@@ -26,21 +26,13 @@ ElseIf $CmdLine[0] = 1 Then ; standalone mode
 	$sTestrunId = "LOADRUNNER-" & StringReplace(_DateTimeFormat(_NowCalc(), 2), "/", "-") & "-" & Random(1, 99999, 1)
 	$sBuildResultsUrl = ""
 	$sRunMode = "standalone"
-Else ; invalid amount of command line option arguments entered
-	ConsoleWriteError("Please provide one or five command line option argument(s):" & @CRLF & @CRLF)
+Else ; invalid amount of command line  parameters entered
+	ConsoleWriteError("Please provide one or five command line parameter(s):" & @CRLF & @CRLF)
 	ConsoleWriteError("LRlauncher.exe <path to scenario file>" & @CRLF & @CRLF & "or Jenkins mode:" & @CRLF)
 	ConsoleWriteError("LRlauncher.exe <path to scenario file> <DashboardName> <TestrunId> <BuildResultsUrl> <standalone|parallel>" & @CRLF & @CRLF)
 	ConsoleWriteError("Please note: to be used script directories must be present in working directory from where LRlauncher is executed." & @CRLF)
 	Exit 1
 EndIf
-
-;~ for debugging purposes only! comment out Exit 1 above
-;~ $sScenarioPath = "nano.lrs"
-;~ $sProductName = IniRead($sIni, "targets-io", "ProductName", "LOADRUNNER")
-;~ $sDashboardName = IniRead($sIni, "targets-io", "DashboardName", "LOAD")
-;~ $sTestrunId = "LoadRunner-" & StringReplace(_DateTimeFormat(_NowCalc(), 2), "/", "-") & "-" & Random(1,99999,1)
-;~ $sBuildResultsUrl = ""
-;~ ============================================
 
 $sLRpath = IniRead($sIni, "LoadRunner", "LRpath", "C:\Program Files (x86)\HP\LoadRunner\bin\wlrun.exe")
 $nTimeout = IniRead($sIni, "LoadRunner", "TimeoutDefault", "90")
