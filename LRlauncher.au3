@@ -158,6 +158,8 @@ If WinExists("HP LoadRunner Controller") Then WinClose("HP LoadRunner Controller
 
 ; send end event to targets-io (at this point, otherwise if sooner targets-io is not able to calculate benchmark results)
 If $sRunMode <> "parallel" Then
+	; an extra keepalive to solve timing issue for rare occasions when previous keepalive failed
+	SendJSONRunningTest("keepalive", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod)
 	ConsoleWrite("Sending end event to targets-io." & @CRLF)
 	If Not SendJSONRunningTest("end", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod) Then
 		ConsoleWriteError("Sending end event unsuccessful: test will have status incompleted in targets-io." & @CRLF)
