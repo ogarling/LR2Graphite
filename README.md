@@ -36,7 +36,7 @@ e.g. LR2Graphite.exe "%WORKSPACE%" 123.123.123.123 2003 0
 
 
 ## Prerequisites
-- Analysed LoadRunner testrun with an MDB file. Note: do not select OUTPUT.MDB  
+- Analysed LoadRunner testrun with a MDB file. Note: do not select OUTPUT.MDB  
 - Graphite instance to export metrics to
 
 OS: Windows  
