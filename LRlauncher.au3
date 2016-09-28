@@ -179,7 +179,7 @@ EndIf
 Func SendJSONRunningTest($sEvent, $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod)
 	; Creating the object
 	$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
-;~ $oHTTP.SetTimeouts(30000,60000,30000,30000)
+	$oHTTP.SetTimeouts(30 * 1000, 240 * 1000, 30 * 1000, 30 * 1000)
 	$oHTTP.Open("POST", "http://" & $sHost & ":" & $nPort & "/running-test/" & $sEvent, False)
 	$oHTTP.SetRequestHeader("Content-Type", "application/json")
 	$oHTTP.SetRequestHeader("Cache-Control", "no-cache")
@@ -246,7 +246,7 @@ EndFunc   ;==>LrsScriptPaths
 Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
 	; Creating the object
 	$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
-;~ $oHTTP.SetTimeouts(30000,60000,30000,30000)
+	$oHTTP.SetTimeouts(30 * 1000, 240 * 1000, 30 * 1000, 30 * 1000)
 	$oHTTP.Open("GET", "http://" & $sHost & ":" & $nPort & "/testrun/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId), False)
 	$oHTTP.SetRequestHeader("Content-Type", "application/json")
 	$oHTTP.SetRequestHeader("Cache-Control", "no-cache")
