@@ -35,17 +35,17 @@ Else
 		MsgBox(16, "Error", "No valid location for LoadRunner mdb databbase file specified.")
 		Exit 1
 	EndIf
-	$sGraphiteHost = InputBox("Graphite", "Graphite hostname or IP address?", "172.21.42.178")
+	$sGraphiteHost = InputBox("Graphite", "Graphite hostname or IP address?", "")
 	If $sGraphiteHost = "" Or @error Then
 		MsgBox(16, "Error", "No valid Graphite hostname or IP address specified.")
 		Exit 1
 	EndIf
-	$nGraphitePort = InputBox("Graphite", "Graphite port number?", "2113")
+	$nGraphitePort = InputBox("Graphite", "Graphite port number?", "2003")
 	If $nGraphitePort = "" Or @error Then
 		MsgBox(16, "Error", "No valid Graphite port number specified.")
 		Exit 1
 	EndIf
-	$nTimeZoneOffset = InputBox("Timezone", "Timezone offset? (hours)", "-1")
+	$nTimeZoneOffset = InputBox("Timezone", "Timezone offset? (hours)", "0")
 	If $nTimeZoneOffset = "" Or @error Then
 		MsgBox(16, "Error", "No valid timezone offset specified.")
 		Exit 1
