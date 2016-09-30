@@ -13,6 +13,9 @@
 #include <Array.au3>
 #include <String.au3>
 
+Global $iEventError = 0
+Local $oMyError = ObjEvent("AutoIt.Error", "ErrFunc") ; install a custom error handler
+
 Const $sIni = StringTrimRight(@ScriptName, 3) & "ini"
 If $CmdLine[0] = 5 Then ; Jenkins mode!
 	$sScenarioPath = $CmdLine[1]
@@ -191,14 +194,18 @@ Func SendJSONRunningTest($sEvent, $sProductName, $sDashboardName, $sTestrunId, $
 			'"productRelease": "' & $sProductRelease & '", ' & _
 			'"rampUpPeriod": "' & $nRampupPeriod & '"}')
 
-	; Download the body response if any, and get the server status response code.
-	$oReceived = $oHTTP.ResponseText
-	$oStatusCode = $oHTTP.Status
-
-	If $oStatusCode <> 200 Then
-		ConsoleWriteError("Targets-io event response status code not 200 OK, but " & $oStatusCode & @CRLF & "Response body: " & @CRLF & $oReceived & @CRLF)
-		Return False
+	If Not $iEventError Then
+		; download the body response if any, and get the server status response code.
+		$oReceived = $oHTTP.ResponseText
+		$oStatusCode = $oHTTP.Status
+		If $oStatusCode <> 200 Then
+			ConsoleWriteError("Targets-io event response status code not 200 OK, but " & $oStatusCode & @CRLF & "Response body: " & @CRLF & $oReceived & @CRLF)
+			Return False
+		EndIf
+	Else
+		$iEventError = 0 ; reset after displaying a COM Error occurred
 	EndIf
+
 	Return True
 EndFunc   ;==>SendJSONRunningTest
 
@@ -276,3 +283,9 @@ Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
 		Return True
 	EndIf
 EndFunc   ;==>AssertionRequest
+
+; This is a custom error handler
+Func ErrFunc()
+	ConsoleWriteError("Error trying to send a Targets-io event: " & $oMyError.description)
+    $iEventError = 1 ; Use to check when a COM Error occurs
+EndFunc   ;==>ErrFunc
