@@ -60,6 +60,20 @@ Global Const $nPercentile = 99   ; percentage expressed in a number between 0 an
 Global $nPayloadBytes = 0
 Global $iSocket = Null
 
+; if Graphite host was entered as hostname then convert it to IP address
+If Not IsNumber(StringLeft($sGraphiteHost, 1)) Then
+	TCPStartup()
+	$sGraphiteHost = TCPNameToIP($sGraphiteHost)
+	If $sGraphiteHost = "" Or @error Then
+		TCPShutdown()
+		ConsoleWriteError("Unable to resolve entered Graphite hostname into IP address. Now exiting." & @CRLF)
+		MsgBox(16, "Graphite hostname", "Unable to resolve entered Graphite hostname into IP address. Now exiting.", 5)
+		Sleep(5)
+		Exit 1
+	EndIf
+	TCPShutdown()
+EndIf
+
 TCPStartup()
 
 $oConnection = _ADO_Connection_Create()
