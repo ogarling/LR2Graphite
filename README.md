@@ -3,7 +3,7 @@
 
 ## Why?
 When using LoadRunner in combination with another load test tool like Gatling, JMeter, etc. it would be nice to unify performance test metrics like response time statistics into a single datasource like Graphite.  
-Works excellent in combination with [targets-io](https://github.com/dmoll1974/targets-io) tool.
+Works excellent in combination with [Targets-io](https://github.com/dmoll1974/targets-io) tool.
 
 ## What?
 By using an [AutoIt](https://www.autoitscript.com/site/) script or executable the LoadRunner analysis MS Access database is being queried and the results are exported into Graphite.
@@ -51,11 +51,11 @@ Simple tool for debugging purposes to manipulate the start time of a LoadRunner 
 ```
 Usage: LR2Graphite_modify_test_start_time.exe <number of hours in the past>
 ```
-### LRlauncher
+### Targets-io LRlauncher
 Tool for creating a performance test pipeline:
 - starting a LoadRunner test (command prompt CLI or via Jenkins)
-- sending start, keepalive and end test events to targets-io
-- running LR2Graphite to export metrics to Graphite (so implicitely to targets-io)
-- validate requirements of test result via targets-io  
+- sending start, keepalive and end test events to Targets-io
+- running LR2Graphite to export metrics to Graphite (so implicitely to Targets-io)
+- validate requirements of test result via Targets-io  
 
-LRlauncher is described in more detail in this [Wiki](https://github.com/ogarling/LR2Graphite/wiki).
+Targets-io LRlauncher is described in more detail in this [Wiki](https://github.com/ogarling/LR2Graphite/wiki).
