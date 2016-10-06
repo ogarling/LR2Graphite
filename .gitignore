@@ -4,6 +4,8 @@ result[1234567890]*/
 data/
 LRR/
 *.bak
+*.tmp
+*.log
 combined_*.c
 *.ci
 TransactionsData.db

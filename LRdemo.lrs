@@ -21,7 +21,7 @@ Description=
 Hosts=1
 Scripts=1
 Groups=0
-Vusers=10
+Vusers=50
 Tranzactions=0
 Rendezvous=0
 Result_file=c:\windows\temp\lrdemo\lrdemo.lrr
@@ -32,8 +32,8 @@ AutoSetResults=0
 AutoOverwriteResults=0
 BaseResultsName=lrdemo
 MaxVuserSeedNumberUsed=0
-PlannedNumOfVusers=10
-PrivatePlannedNumOfVusers=10
+PlannedNumOfVusers=50
+PrivatePlannedNumOfVusers=50
 ManualControlDistributionType=-1
 ManualControlAutoAddVusers=1
 Tranzactions=1
@@ -193,8 +193,8 @@ SubType=Multi+QTWeb
 ScriptType=9
 Path=C:\scripts\LR2Graphite\LRdemo\LRdemo.usr
 EmulatedLocation=None
-Config=[CommandArguments]\r\n[RtsConfigfuration]\r\nAUTMode="1"\r\n[ModemSpeed]\r\nEnableModemSpeed="0"\r\nCustomModemSpeed="1000"\r\nEnableCustomModemSpeed="0"\r\nModemSpeed="128000"\r\n[WEB]\r\nIgnoreContentCachingTypes="1"\r\nCacheAlwaysCheckForNewerPages="0"\r\nUseBrowserAgent=0\r\nGraphBytesPerSecond="1"\r\nGraphHitsPerSecondHttpStatusCodes="1"\r\nAutoTransFileLine="1"\r\nUseCustomAgent=1\r\nLogFileWriteTraceToFile="0"\r\nProxyUseBrowser="1"\r\nLogFileWrite="0"\r\nProxyAutoConfigScriptURL=""\r\nSaveSnapshotResources="0"\r\nSearchForImages="1"\r\nProxyUseProxyServer="0"\r\nProxyUseProxy="1"\r\nResetContext="1"\r\nGraphPagesPerSecond="0"\r\nProxyUseAutoConfigScript="0"\r\nProxyUseSame="0"\r\nProxyHTTPSHost=""\r\nWinInetReplay="0"\r\nSimulatePrefetchPrerender="0"\r\nProxyHTTPHost=""\r\nSimulateCache="1"\r\nDisableAED=0\r\nEnableChecks="0"\r\nProxyHTTPPort="1"\r\nWebRecorderVersion="8"\r\nUseDataFormatExtensions="0"\r\nCacheHtmlPages="1"\r\nKeepNonTextMimeType="text/xml;text/plain"\r\nSnapshotOnErrorActive=0\r\nProxyHTTPSPort="1"\r\nMaxConnections="0"\r\nFailNonCriticalItem="0"\r\nClearCacheForSimulateNewUser="1"\r\nCustomUserAgent=Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)\r\n[Iterations]\r\nRandomMax="90"\r\nRandomMin="60"\r\nIterationPace="IterationASAP"\r\nStartEvery="60"\r\nNumOfIterations="1"\r\n[General]\r\nAutomaticTransactions=0\r\nContinueOnError=0\r\nautomatic_nested_transactions="1"\r\nXlBridgeTimeout="120"\r\niter_ends_val=fixed\r\nUseThreads=1\r\nDefaultRunLogic="uspYNz.825"\r\nAutomaticTransactionsPerFunc=0\r\niter_begins_val=fixed\r\nFailTransOnErrorMsg=0\r\nReplay64bit="0"\r\n[Streaming]\r\nStreamTimeout="30"\r\nStreamLog="1"\r\nStreamRetryTime="10"\r\n[FILTERS]\r\nExcludeFiltersInList=\r\nFilterType=1\r\n[Log]\r\nMsgClassParameters=0\r\nLogOptions=LogBrief\r\nAutoLogBufferSize=1\r\nIncludeEnvInfo=1\r\nPrintTimeStamp=0\r\nMsgClassFull=0\r\nAutoLog=0\r\nMsgClassData=0\r\n[ThinkTime]\r\nOptions=RANDOM\r\nFactor=1.000000\r\nThinkTimeRandomLow=50\r\nThinkTimeRandomHigh=150\r\nLimit=1\r\nLimitFlag=0\r\n
-ConfigUsp=[Profile Actions]\r\nMercIniTreeFather=""\r\nMercIniTreeSectionName="Profile Actions"\r\nProfile Actions name=vuser_init,Action,vuser_end\r\n[RunLogicEndRoot]\r\nMercIniTreeFather=""\r\nMercIniTreeSectionName="RunLogicEndRoot"\r\nMercIniTreeSons="vuser_end"\r\nName="End"\r\nRunLogicActionOrder="vuser_end"\r\nRunLogicActionType="VuserEnd"\r\nRunLogicNumOfIterations="1"\r\nRunLogicObjectKind="Group"\r\nRunLogicRunMode="Sequential"\r\n[RunLogicEndRoot:vuser_end]\r\nMercIniTreeFather="RunLogicEndRoot"\r\nMercIniTreeSectionName="vuser_end"\r\nName="vuser_end"\r\nRunLogicActionType="VuserEnd"\r\nRunLogicObjectKind="Action"\r\n[RunLogicErrorHandlerRoot]\r\nMercIniTreeFather=""\r\nMercIniTreeSectionName="RunLogicErrorHandlerRoot"\r\nMercIniTreeSons="vuser_errorhandler"\r\nName="ErrorHandler"\r\nRunLogicActionOrder="vuser_errorhandler"\r\nRunLogicActionType="VuserErrorHandler"\r\nRunLogicNumOfIterations="1"\r\nRunLogicObjectKind="Group"\r\nRunLogicRunMode="Sequential"\r\n[RunLogicErrorHandlerRoot:vuser_errorhandler]\r\nMercIniTreeFather="RunLogicErrorHandlerRoot"\r\nMercIniTreeSectionName="vuser_errorhandler"\r\nName="vuser_errorhandler"\r\nRunLogicActionType="VuserErrorHandler"\r\nRunLogicObjectKind="Action"\r\n[RunLogicInitRoot]\r\nMercIniTreeFather=""\r\nMercIniTreeSectionName="RunLogicInitRoot"\r\nMercIniTreeSons="vuser_init"\r\nName="Init"\r\nRunLogicActionOrder="vuser_init"\r\nRunLogicActionType="VuserInit"\r\nRunLogicNumOfIterations="1"\r\nRunLogicObjectKind="Group"\r\nRunLogicRunMode="Sequential"\r\n[RunLogicInitRoot:vuser_init]\r\nMercIniTreeFather="RunLogicInitRoot"\r\nMercIniTreeSectionName="vuser_init"\r\nName="vuser_init"\r\nRunLogicActionType="VuserInit"\r\nRunLogicObjectKind="Action"\r\n[RunLogicRunRoot]\r\nMercIniTreeFather=""\r\nMercIniTreeSectionName="RunLogicRunRoot"\r\nMercIniTreeSons="Action"\r\nName="Run"\r\nRunLogicActionOrder="Action"\r\nRunLogicActionType="VuserRun"\r\nRunLogicAfterPaceMax="90.000"\r\nRunLogicAfterPaceMin="60.000"\r\nRunLogicNumOfIterations="1"\r\nRunLogicObjectKind="Group"\r\nRunLogicPaceConstAfterTime="60.000"\r\nRunLogicPaceConstTime="60.000"\r\nRunLogicPaceType="Asap"\r\nRunLogicRandomPaceMax="90.000"\r\nRunLogicRandomPaceMin="60.000"\r\nRunLogicRunMode="Sequential"\r\n[RunLogicRunRoot:Action]\r\nMercIniTreeFather="RunLogicRunRoot"\r\nMercIniTreeSectionName="Action"\r\nName="Action"\r\nRunLogicActionType="VuserRun"\r\nRunLogicObjectKind="Action"\r\n
+Config=[CommandArguments]\r\n[ModemSpeed]\r\nEnableModemSpeed="0"\r\nCustomModemSpeed="1000"\r\nEnableCustomModemSpeed="0"\r\nModemSpeed="128000"\r\n[RtsConfigfuration]\r\nAUTMode="1"\r\n[WEB]\r\nIgnoreContentCachingTypes="1"\r\nCacheAlwaysCheckForNewerPages="0"\r\nUseBrowserAgent=0\r\nGraphBytesPerSecond="1"\r\nGraphHitsPerSecondHttpStatusCodes="1"\r\nAutoTransFileLine="1"\r\nUseCustomAgent=1\r\nLogFileWriteTraceToFile="0"\r\nProxyUseBrowser="1"\r\nLogFileWrite="0"\r\nProxyAutoConfigScriptURL=""\r\nSaveSnapshotResources="0"\r\nSearchForImages="1"\r\nProxyUseProxyServer="0"\r\nProxyUseProxy="1"\r\nResetContext="1"\r\nGraphPagesPerSecond="0"\r\nProxyUseAutoConfigScript="0"\r\nProxyUseSame="0"\r\nProxyHTTPSHost=""\r\nWinInetReplay="0"\r\nSimulatePrefetchPrerender="0"\r\nProxyHTTPHost=""\r\nSimulateCache="1"\r\nDisableAED=1\r\nEnableChecks="0"\r\nProxyHTTPPort="1"\r\nWebRecorderVersion="8"\r\nUseDataFormatExtensions="0"\r\nCacheHtmlPages="1"\r\nKeepNonTextMimeType="text/xml;text/plain"\r\nSnapshotOnErrorActive=0\r\nProxyHTTPSPort="1"\r\nMaxConnections="0"\r\nFailNonCriticalItem="0"\r\nClearCacheForSimulateNewUser="1"\r\nCustomUserAgent=Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)\r\n[Iterations]\r\nRandomMax="90"\r\nRandomMin="60"\r\nIterationPace="IterationASAP"\r\nStartEvery="60"\r\nNumOfIterations="1"\r\n[General]\r\nAutomaticTransactions=0\r\nContinueOnError=0\r\nautomatic_nested_transactions="1"\r\nXlBridgeTimeout="120"\r\nUseThreads=1\r\niter_ends_val=fixed\r\nDefaultRunLogic="uspeBq.515"\r\nAutomaticTransactionsPerFunc=0\r\niter_begins_val=fixed\r\nFailTransOnErrorMsg=0\r\nReplay64bit="0"\r\n[Streaming]\r\nStreamTimeout="30"\r\nStreamLog="1"\r\nStreamRetryTime="10"\r\n[FILTERS]\r\nExcludeFiltersInList=\r\nFilterType=1\r\n[Log]\r\nMsgClassParameters=1\r\nLogOptions=LogDisabled\r\nAutoLogBufferSize=1\r\nIncludeEnvInfo=1\r\nPrintTimeStamp=0\r\nMsgClassFull=0\r\nAutoLog=0\r\nMsgClassData=0\r\nLogDetail=1\r\n[ThinkTime]\r\nOptions=RANDOM\r\nFactor=1.000000\r\nThinkTimeRandomLow=50\r\nThinkTimeRandomHigh=150\r\nLimit=1\r\nLimitFlag=0\r\n
+ConfigUsp=[Profile Actions]\r\nMercIniTreeFather=""\r\nMercIniTreeSectionName="Profile Actions"\r\nProfile Actions name=vuser_init,Pass,Fail,vuser_end\r\n[RunLogicEndRoot]\r\nMercIniTreeFather=""\r\nMercIniTreeSectionName="RunLogicEndRoot"\r\nMercIniTreeSons="vuser_end"\r\nName="End"\r\nRunLogicActionOrder="vuser_end"\r\nRunLogicActionType="VuserEnd"\r\nRunLogicNumOfIterations="1"\r\nRunLogicObjectKind="Group"\r\nRunLogicRunMode="Sequential"\r\n[RunLogicEndRoot:vuser_end]\r\nMercIniTreeFather="RunLogicEndRoot"\r\nMercIniTreeSectionName="vuser_end"\r\nName="vuser_end"\r\nRunLogicActionType="VuserEnd"\r\nRunLogicObjectKind="Action"\r\n[RunLogicErrorHandlerRoot]\r\nMercIniTreeFather=""\r\nMercIniTreeSectionName="RunLogicErrorHandlerRoot"\r\nMercIniTreeSons="vuser_errorhandler"\r\nName="ErrorHandler"\r\nRunLogicActionOrder="vuser_errorhandler"\r\nRunLogicActionType="VuserErrorHandler"\r\nRunLogicNumOfIterations="1"\r\nRunLogicObjectKind="Group"\r\nRunLogicRunMode="Sequential"\r\n[RunLogicErrorHandlerRoot:vuser_errorhandler]\r\nMercIniTreeFather="RunLogicErrorHandlerRoot"\r\nMercIniTreeSectionName="vuser_errorhandler"\r\nName="vuser_errorhandler"\r\nRunLogicActionType="VuserErrorHandler"\r\nRunLogicObjectKind="Action"\r\n[RunLogicInitRoot]\r\nMercIniTreeFather=""\r\nMercIniTreeSectionName="RunLogicInitRoot"\r\nMercIniTreeSons="vuser_init"\r\nName="Init"\r\nRunLogicActionOrder="vuser_init"\r\nRunLogicActionType="VuserInit"\r\nRunLogicNumOfIterations="1"\r\nRunLogicObjectKind="Group"\r\nRunLogicRunMode="Sequential"\r\n[RunLogicInitRoot:vuser_init]\r\nMercIniTreeFather="RunLogicInitRoot"\r\nMercIniTreeSectionName="vuser_init"\r\nName="vuser_init"\r\nRunLogicActionType="VuserInit"\r\nRunLogicObjectKind="Action"\r\n[RunLogicRunRoot]\r\nMercIniTreeFather=""\r\nMercIniTreeSectionName="RunLogicRunRoot"\r\nMercIniTreeSons="Pass,Fail"\r\nName="Run"\r\nRunLogicActionOrder="Pass,Pass,Pass,Fail"\r\nRunLogicActionType="VuserRun"\r\nRunLogicAfterPaceMax="90.000"\r\nRunLogicAfterPaceMin="60.000"\r\nRunLogicNumOfIterations="1"\r\nRunLogicObjectKind="Group"\r\nRunLogicPaceConstAfterTime="60.000"\r\nRunLogicPaceConstTime="60.000"\r\nRunLogicPaceType="Asap"\r\nRunLogicRandomPaceMax="90.000"\r\nRunLogicRandomPaceMin="60.000"\r\nRunLogicRunMode="Sequential"\r\n[RunLogicRunRoot:Fail]\r\nMercIniTreeFather="RunLogicRunRoot"\r\nMercIniTreeSectionName="Fail"\r\nName="Fail"\r\nRunLogicActionType="VuserRun"\r\nRunLogicObjectKind="Action"\r\n[RunLogicRunRoot:Pass]\r\nMercIniTreeFather="RunLogicRunRoot"\r\nMercIniTreeSectionName="Pass"\r\nName="Pass"\r\nRunLogicActionType="VuserRun"\r\nRunLogicObjectKind="Action"\r\n
 Param=
 TDPath=
 TDServer=
@@ -4326,7 +4326,7 @@ ItemsNumber=IntV1|0
 }
 
 {ScenarioDiagnostics
-XMLData=<Mediators distribution = "1" enabled= "1" ><Mediator type= "SARM" enabled= "0" ><Machine name = "" type = "Win2000" ><Connection><Firewall enabled="0" listener=""/></Connection></Machine><TOPOLOGY></TOPOLOGY></Mediator><Mediator type= "OracleDB" enabled= "0" ><Machine name = "" type = "Win2000" ><Connection><Firewall enabled="0" listener=""/></Connection></Machine><TOPOLOGY></TOPOLOGY></Mediator><Mediator type= "WebPage" enabled= "1" ></Mediator><Mediator type= "J2EE" enabled= "0" ></Mediator><Mediator type= "SiebelDB" enabled= "0" ><Machine name = "" type = "Win2000" ><Connection><Firewall enabled="0" listener=""/></Connection></Machine><TOPOLOGY></TOPOLOGY></Mediator><Mediator type="SAP" enabled="0"><Machine name="" type="Win2000"><Connection><Firewall enabled="0" listener=""/></Connection></Machine><TOPOLOGY><SERVER host="" instance="" RouterString=""><LOGIN username="" password="5770e684e" client_num=""/></SERVER></TOPOLOGY></Mediator></Mediators>
+XMLData=<Mediators distribution = "1" enabled= "1" ><Mediator type= "SARM" enabled= "0" ><Machine name = "" type = "Win2000" ><Connection><Firewall enabled="0" listener=""/></Connection></Machine><TOPOLOGY></TOPOLOGY></Mediator><Mediator type= "OracleDB" enabled= "0" ><Machine name = "" type = "Win2000" ><Connection><Firewall enabled="0" listener=""/></Connection></Machine><TOPOLOGY></TOPOLOGY></Mediator><Mediator type= "WebPage" enabled= "1" ></Mediator><Mediator type= "J2EE" enabled= "0" ></Mediator><Mediator type= "SiebelDB" enabled= "0" ><Machine name = "" type = "Win2000" ><Connection><Firewall enabled="0" listener=""/></Connection></Machine><TOPOLOGY></TOPOLOGY></Mediator><Mediator type="SAP" enabled="0"><Machine name="" type="Win2000"><Connection><Firewall enabled="0" listener=""/></Connection></Machine><TOPOLOGY><SERVER host="" instance="" RouterString=""><LOGIN username="" password="57f62f29e" client_num=""/></SERVER></TOPOLOGY></Mediator></Mediators>
 }
 
 {ScenarioAlertsConfig
@@ -4334,98 +4334,52 @@ XMLData=<Mediators distribution = "1" enabled= "1" ><Mediator type= "SARM" enabl
 }
 
 {ScenarioSchedulerConfig
-<?xml version="1.0" encoding="utf-16"?>
-
-<LoadTest>
-
-  <Schedulers>
-
-    <CurrentSchedulerId>1</CurrentSchedulerId>
-
-    <StartMode>
-
-      <StartModeType>Immediately</StartModeType>
-
-      <StartModes>
-
-        <Immediately />
-
-        <DelayAfterLTStart>0</DelayAfterLTStart>
-
-        <StartAt>2016-05-18T21:07:28.0706177+02:00</StartAt>
-
-      </StartModes>
-
-    </StartMode>
-
-    <Scheduler ID="1">
-
-      <Name>Schedule 1</Name>
-
-      <Manual>
-
-        <SchedulerType>Global</SchedulerType>
-
-        <Global>
-
-          <Scheduling>
-
-            <IsDefaultScheduler>true</IsDefaultScheduler>
-
-            <DynamicScheduling>
-
-              <Run>
-
-                <StartCondition>
-
-                  <PrevAction />
-
-                </StartCondition>
-
-                <TotalVusersNumber>10</TotalVusersNumber>
-
-              </Run>
-
-              <Duration>
-
-                <StartCondition>
-
-                  <PrevAction />
-
-                </StartCondition>
-
-                <RunFor>120</RunFor>
-
-              </Duration>
-
-              <StopAll>
-
-                <StartCondition>
-
-                  <PrevAction />
-
-                </StartCondition>
-
-              </StopAll>
-
-            </DynamicScheduling>
-
-          </Scheduling>
-
-        </Global>
-
-        <Groups>
-
-          <InitAllBeforeStart>false</InitAllBeforeStart>
-
-        </Groups>
-
-      </Manual>
-
-    </Scheduler>
-
-  </Schedulers>
-
+<?xml version="1.0" encoding="utf-16"?>
+<LoadTest>
+  <Schedulers>
+    <CurrentSchedulerId>1</CurrentSchedulerId>
+    <StartMode>
+      <StartModeType>Immediately</StartModeType>
+      <StartModes>
+        <Immediately />
+        <DelayAfterLTStart>0</DelayAfterLTStart>
+        <StartAt>2016-05-18T21:07:28.0706177+02:00</StartAt>
+      </StartModes>
+    </StartMode>
+    <Scheduler ID="1">
+      <Name>Schedule 1</Name>
+      <Manual>
+        <SchedulerType>Global</SchedulerType>
+        <Global>
+          <Scheduling>
+            <IsDefaultScheduler>true</IsDefaultScheduler>
+            <DynamicScheduling>
+              <Run>
+                <StartCondition>
+                  <PrevAction />
+                </StartCondition>
+                <TotalVusersNumber>50</TotalVusersNumber>
+              </Run>
+              <Duration>
+                <StartCondition>
+                  <PrevAction />
+                </StartCondition>
+                <RunFor>120</RunFor>
+              </Duration>
+              <StopAll>
+                <StartCondition>
+                  <PrevAction />
+                </StartCondition>
+              </StopAll>
+            </DynamicScheduling>
+          </Scheduling>
+        </Global>
+        <Groups>
+          <InitAllBeforeStart>false</InitAllBeforeStart>
+        </Groups>
+      </Manual>
+    </Scheduler>
+  </Schedulers>
 </LoadTest>
 }
 
