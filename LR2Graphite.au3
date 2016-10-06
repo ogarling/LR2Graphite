@@ -59,19 +59,18 @@ Global Const $nGraphiteResolution = 10 ; aggregation resolution (seconds); deter
 Global Const $nPercentile = 99   ; percentage expressed in a number between 0 and 100
 Global $nPayloadBytes = 0
 Global $iSocket = Null
+Global $sTransactionState = ""
 
 TCPStartup()
 
-; if Graphite host was entered as hostname then convert it to IP address
-If Not IsNumber(StringLeft($sGraphiteHost, 1)) Then
-	$sGraphiteHost = TCPNameToIP($sGraphiteHost)
-	If $sGraphiteHost = "" Or @error Then
-		TCPShutdown()
-		ConsoleWriteError("Unable to resolve entered Graphite hostname into IP address. Now exiting." & @CRLF)
-		MsgBox(16, "Graphite hostname", "Unable to resolve entered Graphite hostname into IP address. Now exiting.", 5)
-		Sleep(5)
-		Exit 1
-	EndIf
+; if Graphite host can be entered as hostname, so it is converted to IP address (even it is already a valid IP address)
+$sGraphiteHost = TCPNameToIP($sGraphiteHost)
+If $sGraphiteHost = "" Or @error Then
+	TCPShutdown()
+	ConsoleWriteError("Unable to resolve entered Graphite hostname into IP address. Now exiting." & @CRLF)
+	MsgBox(16, "Graphite hostname", "Unable to resolve entered Graphite hostname into IP address. Now exiting.", 5)
+	Sleep(5)
+	Exit 1
 EndIf
 
 $oConnection = _ADO_Connection_Create()
@@ -84,7 +83,7 @@ EndIf
 ;determine available scripts
 $aScriptTable = _ADO_Execute($oConnection, "SELECT * FROM Script", True)
 If @error Then
-	MsgBox(16, "Query script table", "Query failed. Valid LoadRunner database specified? (and not OUTPUT.MDB?)", 5)
+	MsgBox(16, "Query script table", "Query failed." & @CRLF & "Valid LoadRunner database specified? (and not OUTPUT.MDB?)", 10)
 	_ADO_Connection_Close($oConnection)
 	$oConnection = Null
 	TCPShutdown()
@@ -108,16 +107,38 @@ Next
 Local $aMeasurementsPerScript[$nScripts] ; dimension array to store metrics per script
 For $i = 0 to $nScripts - 1  ; loop through available scripts
 	$sScriptName = ($aScriptTable[2])[$i][1]
-	$sQuery = "SELECT Event_map.[Event Name], Event_meter.[End Time], Event_meter.Value FROM Event_map INNER JOIN Event_meter ON Event_map.[Event ID] = Event_meter.[Event ID] WHERE (((Event_meter.[Script ID])=" & $i & ") AND ((Event_meter.Status1)=1)) ORDER BY Event_map.[Event Name], Event_meter.[End Time];"
-	$rc = _ADO_Execute($oConnection, $sQuery, True)
-	If Not IsArray($rc) Or @error Then
-		MsgBox(16, "Query measurements per script", "Query for script " & $sScriptName & " failed.", 5)
+	$sQueryPassed = "SELECT Event_map.[Event Name], Event_meter.[End Time], Event_meter.Value FROM Event_map INNER JOIN Event_meter ON Event_map.[Event ID] = Event_meter.[Event ID] WHERE (((Event_meter.[Script ID])=" & $i & ") AND ((Event_meter.Status1)=1)) ORDER BY Event_map.[Event Name], Event_meter.[End Time];" ; query for passed transactions
+	$sQueryFailed = "SELECT Event_map.[Event Name], Event_meter.[End Time], Event_meter.Value FROM Event_map INNER JOIN Event_meter ON Event_map.[Event ID] = Event_meter.[Event ID] WHERE (((Event_meter.[Script ID])=" & $i & ") AND ((Event_meter.Status1)=0)) ORDER BY Event_map.[Event Name], Event_meter.[End Time];" ; query for failed transactions
+	$aAdoRetPassed = _ADO_Execute($oConnection, $sQueryPassed, True)
+	$aAdoRetFailed = _ADO_Execute($oConnection, $sQueryFailed, True)
+	If Not IsArray($aAdoRetPassed) And Not IsArray($aAdoRetFailed) Then
+		ConsoleWriteError("Querying transactions for script " & $sScriptName & " resulted in something unexpected. Corrupt result set for this script?" & @CRLF)
+		MsgBox(16, "Query measurements per script", "Querying transactions for script " & $sScriptName & " resulted in something unexpected." & @CRLF & "Corrupt result set for this script?", 10)
 		ContinueLoop
+	EndIf
+
+	; passed transactions
+	If Not IsArray($aAdoRetPassed) Then
+		ConsoleWrite("No passed transactions found for script " & $sScriptName)
+		MsgBox(16, "Query measurements per script", "No passed transactions found for script " & $sScriptName, 10)
 	Else
-		$aMeasurementsPerScript[$i] = (_ADO_Execute($oConnection, $sQuery, True))[2]
-		If @error Then MsgBox(16, "Warning", "Query for script " & $sScriptName & " failed. Probably due to LoadRunner version incompatibility.", 5)
+		$sTransactionState = "passed" ; toggle "passed" mode
+		;_ArrayDisplay($aAdoRetPassed[2])
+		$aMeasurementsPerScript[$i] = $aAdoRetPassed[2]
+		;If @error Then MsgBox(16, "Warning", "Query for script " & $sScriptName & " failed. Probably due to LoadRunner version incompatibility.", 5)
 		$rc = ProcessScript($aMeasurementsPerScript[$i], $sScriptName)
-		if @error Or Not $rc Then MsgBox(16, "Error", "Processing for script " & $sScriptName & " failed.", 5)
+		if @error Or Not $rc Then MsgBox(16, "Error", "Processing passed transactions for script " & $sScriptName & " failed.", 10)
+	EndIf
+
+	; failed transactions:
+	If Not IsArray($aAdoRetFailed) Then
+		ConsoleWrite("Good: no failed transactions found for script " & $sScriptName & @CRLF)
+	Else
+		$sTransactionState = "failed" ; toggle "failed" mode
+		;_ArrayDisplay($aAdoRetFailed[2])
+		$aMeasurementsPerScript[$i] = $aAdoRetFailed[2]
+		$rc = ProcessScript($aMeasurementsPerScript[$i], $sScriptName)
+		if @error Or Not $rc Then MsgBox(16, "Error", "Processing failed transactions for script " & $sScriptName & " failed.", 10)
 	EndIf
 Next
 
@@ -133,8 +154,8 @@ TCPShutdown()
 Exit 0
 
 Func ProcessScript ($aMeasurements, ByRef $sScript)
-	TrayTip("", "Now processing script " & $sScript, 1)
-	ConsoleWrite(@CRLF & "Now processing script " & $sScript & ":" & @CRLF & @CRLF)
+	TrayTip("", "Now processing " & $sTransactionState & " transactions for script " & $sScript, 1)
+	ConsoleWrite(@CRLF & "Now processing " & $sTransactionState & " transactions for script " & $sScript & ":" & @CRLF & @CRLF)
 	$aUniqueTransactions = _ArrayUnique($aMeasurements)
 ;~ 	_ArrayDisplay($aUniqueTransactions)
 	For $i = 1 to $aUniqueTransactions[0]
@@ -146,7 +167,7 @@ Func ProcessScript ($aMeasurements, ByRef $sScript)
 		Next
 		$ret = ProcessTransaction($aTransactionsSplit, $aUniqueTransactions[$i], $sScript)
 		if @error Or Not $ret Then
-			MsgBox(16, "Error", "Processing transactions for transaction " & $aUniqueTransactions[$i] & " belonging to script " & $sScriptName & " failed.", 5)
+			MsgBox(16, "Error", "Processing transactions for transaction " & $aUniqueTransactions[$i] & " belonging to script " & $sScriptName & " failed.", 10)
 			Return False
 		EndIf
 	Next
@@ -169,7 +190,7 @@ Func ProcessTransaction ($aTransactions, ByRef $sTransactionName, ByRef $sScript
 ;	_ArrayDisplay($aBucketsHolder[$nBuckets - 1])
 	$ret = ProcessBuckets($aBucketsHolder, $sTransactionName, $sScript)
 	if @error Or Not $ret Then
-		MsgBox(16, "Error", "Processing buckets for transaction " & $sTransactionName & " belonging to script " & $sScript & " failed.", 5)
+		MsgBox(16, "Error", "Processing buckets for transaction " & $sTransactionName & " belonging to script " & $sScript & " failed.", 10)
 		Return False
 	EndIf
 
@@ -194,29 +215,37 @@ Func ProcessBuckets ($aBuckets, ByRef $sTransactionName, ByRef $sScript)
 	Return True
 EndFunc
 
-Func ExportToGraphite ($sMetricPath, $nMin, $nAvg, $nMax, $nPerc, $nTps, $nEpoch)
+Func ExportToGraphite($sMetricPath, $nMin, $nAvg, $nMax, $nPerc, $nTps, $nEpoch)
 	If $iSocket = Null Then
 		$iSocket = TCPConnect($sGraphiteHost, $nGraphitePort)
 		If $iSocket <= 0 Or @error Then
 			ConsoleWriteError("Error occurred while connecting to Graphite host. Please check hostname/IP adrress and port number." & @CRLF)
+			MsgBox(16, "Error", "Error connecting to Graphite host " & $sGraphiteHost & " on port " & $nGraphitePort, 10)
 			Exit 1
 		EndIf
 	EndIf
-	$ret = TCPSend($iSocket, $sMetricPath & ".min " & $nMin & " " & $nEpoch & @LF)
-	If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".min" & @CRLF)
-	If Not @error Then $nPayloadBytes += $ret
-	$ret = TCPSend($iSocket, $sMetricPath & ".avg " & $nAvg & " " & $nEpoch & @LF)
-	If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".avg" & @CRLF)
-	If Not @error Then $nPayloadBytes += $ret
-	$ret = TCPSend($iSocket, $sMetricPath & ".max " & $nMax & " " & $nEpoch & @LF)
-	If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".min" & @CRLF)
-	If Not @error Then $nPayloadBytes += $ret
-	$ret = TCPSend($iSocket, $sMetricPath & ".perc " & $nPerc & " " & $nEpoch & @LF)
-	If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".perc" & @CRLF)
-	If Not @error Then $nPayloadBytes += $ret
-	$ret = TCPSend($iSocket, $sMetricPath & ".tps " & $nTps & " " & $nEpoch & @LF)
-	If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".tps" & @CRLF)
-	If Not @error Then $nPayloadBytes += $ret
+
+	If $sTransactionState = "passed" Then
+		$ret = TCPSend($iSocket, $sMetricPath & ".min " & $nMin & " " & $nEpoch & @LF)
+		If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".min" & @CRLF)
+		If Not @error Then $nPayloadBytes += $ret
+		$ret = TCPSend($iSocket, $sMetricPath & ".avg " & $nAvg & " " & $nEpoch & @LF)
+		If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".avg" & @CRLF)
+		If Not @error Then $nPayloadBytes += $ret
+		$ret = TCPSend($iSocket, $sMetricPath & ".max " & $nMax & " " & $nEpoch & @LF)
+		If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".min" & @CRLF)
+		If Not @error Then $nPayloadBytes += $ret
+		$ret = TCPSend($iSocket, $sMetricPath & ".perc " & $nPerc & " " & $nEpoch & @LF)
+		If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".perc" & @CRLF)
+		If Not @error Then $nPayloadBytes += $ret
+		$ret = TCPSend($iSocket, $sMetricPath & ".tpps " & $nTps & " " & $nEpoch & @LF)
+		If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".tps" & @CRLF)
+		If Not @error Then $nPayloadBytes += $ret
+	ElseIf $sTransactionState = "failed" Then
+		$ret = TCPSend($iSocket, $sMetricPath & ".tfps " & $nTps & " " & $nEpoch & @LF)
+		If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " socket: " & $iSocket & " metric path: " & $sMetricPath & ".tps" & @CRLF)
+		If Not @error Then $nPayloadBytes += $ret
+	EndIf
 
 	If $nPayloadBytes > 256000 Then  ; after 250KB use new TCP connection
 		$ret = TCPCloseSocket($iSocket)
@@ -255,7 +284,7 @@ EndFunc ; Percentile
 Func SearchPath (ByRef $sPath)
 	Local $hSearch = FileFindFirstFile($sPath & "\*.")
 	    If $hSearch = -1 Then
-        MsgBox(16, "Error", "No subdirectory found.", 5)
+        MsgBox(16, "Error", "No subdirectory found.", 10)
         Return False
     EndIf
 
