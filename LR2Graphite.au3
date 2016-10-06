@@ -60,9 +60,10 @@ Global Const $nPercentile = 99   ; percentage expressed in a number between 0 an
 Global $nPayloadBytes = 0
 Global $iSocket = Null
 
+TCPStartup()
+
 ; if Graphite host was entered as hostname then convert it to IP address
 If Not IsNumber(StringLeft($sGraphiteHost, 1)) Then
-	TCPStartup()
 	$sGraphiteHost = TCPNameToIP($sGraphiteHost)
 	If $sGraphiteHost = "" Or @error Then
 		TCPShutdown()
@@ -71,14 +72,14 @@ If Not IsNumber(StringLeft($sGraphiteHost, 1)) Then
 		Sleep(5)
 		Exit 1
 	EndIf
-	TCPShutdown()
 EndIf
-
-TCPStartup()
 
 $oConnection = _ADO_Connection_Create()
 _ADO_Connection_OpenConString($oConnection, $sConnectionString)
-If @error Then SetError(@error, @extended, $ADO_RET_FAILURE)
+If @error Then
+	SetError(@error, @extended, $ADO_RET_FAILURE)
+	TCPShutdown()
+EndIf
 
 ;determine available scripts
 $aScriptTable = _ADO_Execute($oConnection, "SELECT * FROM Script", True)
@@ -86,6 +87,7 @@ If @error Then
 	MsgBox(16, "Query script table", "Query failed. Valid LoadRunner database specified? (and not OUTPUT.MDB?)", 5)
 	_ADO_Connection_Close($oConnection)
 	$oConnection = Null
+	TCPShutdown()
 	Exit 1
 EndIf
 $nScripts = UBound($aScriptTable[2])
@@ -106,14 +108,14 @@ Next
 Local $aMeasurementsPerScript[$nScripts] ; dimension array to store metrics per script
 For $i = 0 to $nScripts - 1  ; loop through available scripts
 	$sScriptName = ($aScriptTable[2])[$i][1]
-	$sQuery = "SELECT Event_map.[Event Name], Event_meter.[End Time], Event_meter.Value FROM Event_map INNER JOIN Event_meter ON Event_map.[Event ID] = Event_meter.[Event ID] WHERE (((Event_meter.[Script ID])=" & $i & ")) ORDER BY Event_map.[Event Name], Event_meter.[End Time];"
+	$sQuery = "SELECT Event_map.[Event Name], Event_meter.[End Time], Event_meter.Value FROM Event_map INNER JOIN Event_meter ON Event_map.[Event ID] = Event_meter.[Event ID] WHERE (((Event_meter.[Script ID])=" & $i & ") AND ((Event_meter.Status1)=1)) ORDER BY Event_map.[Event Name], Event_meter.[End Time];"
 	$rc = _ADO_Execute($oConnection, $sQuery, True)
 	If Not IsArray($rc) Or @error Then
 		MsgBox(16, "Query measurements per script", "Query for script " & $sScriptName & " failed.", 5)
 		ContinueLoop
 	Else
 		$aMeasurementsPerScript[$i] = (_ADO_Execute($oConnection, $sQuery, True))[2]
-		If @error Then MsgBox(16, "Query measurements per script", "Query for script " & $sScriptName & " failed.", 5)
+		If @error Then MsgBox(16, "Warning", "Query for script " & $sScriptName & " failed. Probably due to LoadRunner version incompatibility.", 5)
 		$rc = ProcessScript($aMeasurementsPerScript[$i], $sScriptName)
 		if @error Or Not $rc Then MsgBox(16, "Error", "Processing for script " & $sScriptName & " failed.", 5)
 	EndIf
