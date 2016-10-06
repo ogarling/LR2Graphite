@@ -23,7 +23,8 @@ Description=
 ScriptLocale=en-US
 [Actions]
 vuser_init=vuser_init.c
-Action=Action.c
+Pass=Pass.c
+Fail=Fail.c
 vuser_end=vuser_end.c
 [RunLogicFiles]
 Default Profile=default.usp
@@ -35,24 +36,28 @@ Default Profile=default.cfg
 globals.h=
 [Modified Actions]
 vuser_init=0
-Action=1
+Pass=1
+Fail=1
 vuser_end=0
 [Recorded Actions]
 vuser_init=0
-Action=0
+Pass=0
+Fail=0
 vuser_end=0
 [Replayed Actions]
 vuser_init=1
-Action=1
+Pass=1
+Fail=0
 vuser_end=1
 [Interpreters]
 vuser_init=cci
-Action=cci
+Pass=cci
+Fail=cci
 vuser_end=cci
 [TransactionsOrder]
 Order=
 [StateManagement]
 LastReplayStatus=1
 [ActiveReplay]
-LastReplayedRunName=result1
-ActiveRunName=result1
+LastReplayedRunName=
+ActiveRunName=
