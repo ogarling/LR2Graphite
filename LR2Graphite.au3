@@ -60,6 +60,7 @@ Global Const $nPercentile = 99   ; percentage expressed in a number between 0 an
 Global $nPayloadBytes = 0
 Global $iSocket = Null
 Global $sTransactionState = ""
+Global $nStartTime, $nEndTime
 
 TCPStartup()
 
@@ -111,31 +112,34 @@ For $i = 0 to $nScripts - 1  ; loop through available scripts
 	$sQueryFailed = "SELECT Event_map.[Event Name], Event_meter.[End Time], Event_meter.Value FROM Event_map INNER JOIN Event_meter ON Event_map.[Event ID] = Event_meter.[Event ID] WHERE (((Event_meter.[Script ID])=" & $i & ") AND ((Event_meter.Status1)=0)) ORDER BY Event_map.[Event Name], Event_meter.[End Time];" ; query for failed transactions
 	$aAdoRetPassed = _ADO_Execute($oConnection, $sQueryPassed, True)
 	$aAdoRetFailed = _ADO_Execute($oConnection, $sQueryFailed, True)
-	If Not IsArray($aAdoRetPassed) And Not IsArray($aAdoRetFailed) Then
+	If Not IsArray($aAdoRetPassed) And Not IsArray($aAdoRetFailed) Then ; if both passed and failed result sets aren't arrays then something is wrong with mdb
 		ConsoleWriteError("Querying transactions for script " & $sScriptName & " resulted in something unexpected. Corrupt result set for this script?" & @CRLF)
 		MsgBox(16, "Query measurements per script", "Querying transactions for script " & $sScriptName & " resulted in something unexpected." & @CRLF & "Corrupt result set for this script?", 10)
-		ContinueLoop
+		ContinueLoop ; better luck for next script in line
 	EndIf
 
-	; passed transactions
-	If Not IsArray($aAdoRetPassed) Then
-		ConsoleWrite("No passed transactions found for script " & $sScriptName)
-		MsgBox(16, "Query measurements per script", "No passed transactions found for script " & $sScriptName, 10)
+	; from this point:	either a failed and/or passed transaction has occurred
+	; processing passed transactions
+	If Not IsArray($aAdoRetPassed) Then ; if no passed transactions occurred then failed transactions did: writing zeroes for metric tpps (passed)
+		ConsoleWrite("Test failed: no passed transactions found for script " & $sScriptName & @CRLF & "Now writing zero values for metric tpps:" & @CRLF)
+		; sending "0" values to Graphite:
+		$nEndTime = $nStartTime + _ArrayMax($aAdoRetFailed[2], 1, 0, UBound($aAdoRetFailed[2]) - 1, 1)
+		ZeroWritingGraphite("passed", $sScriptName, _ArrayUnique($aAdoRetFailed[2]))
 	Else
 		$sTransactionState = "passed" ; toggle "passed" mode
-		;_ArrayDisplay($aAdoRetPassed[2])
 		$aMeasurementsPerScript[$i] = $aAdoRetPassed[2]
-		;If @error Then MsgBox(16, "Warning", "Query for script " & $sScriptName & " failed. Probably due to LoadRunner version incompatibility.", 5)
 		$rc = ProcessScript($aMeasurementsPerScript[$i], $sScriptName)
 		if @error Or Not $rc Then MsgBox(16, "Error", "Processing passed transactions for script " & $sScriptName & " failed.", 10)
 	EndIf
 
-	; failed transactions:
-	If Not IsArray($aAdoRetFailed) Then
-		ConsoleWrite("Good: no failed transactions found for script " & $sScriptName & @CRLF)
+	; processing failed transactions:
+	If Not IsArray($aAdoRetFailed) Then ; if no failed transactions occurred then passed transactions did: writing zeroes for metric tfps (failed)
+		ConsoleWrite(@CRLF & "Good: no failed transactions found for script " & $sScriptName & @CRLF & "Now writing zero values for metric tfps:" & @CRLF)
+		; sending "0" values to Graphite:
+		$nEndTime = $nStartTime + _ArrayMax($aAdoRetPassed[2], 1, 0, UBound($aAdoRetPassed[2]) - 1, 1)
+		ZeroWritingGraphite("failed", $sScriptName, _ArrayUnique($aAdoRetPassed[2]))
 	Else
 		$sTransactionState = "failed" ; toggle "failed" mode
-		;_ArrayDisplay($aAdoRetFailed[2])
 		$aMeasurementsPerScript[$i] = $aAdoRetFailed[2]
 		$rc = ProcessScript($aMeasurementsPerScript[$i], $sScriptName)
 		if @error Or Not $rc Then MsgBox(16, "Error", "Processing failed transactions for script " & $sScriptName & " failed.", 10)
@@ -157,7 +161,7 @@ Func ProcessScript ($aMeasurements, ByRef $sScript)
 	TrayTip("", "Now processing " & $sTransactionState & " transactions for script " & $sScript, 1)
 	ConsoleWrite(@CRLF & "Now processing " & $sTransactionState & " transactions for script " & $sScript & ":" & @CRLF & @CRLF)
 	$aUniqueTransactions = _ArrayUnique($aMeasurements)
-;~ 	_ArrayDisplay($aUniqueTransactions)
+ 	;_ArrayDisplay($aMeasurements)
 	For $i = 1 to $aUniqueTransactions[0]
 		$aTransactionSplitIndices = _ArrayFindAll($aMeasurements, $aUniqueTransactions[$i])
 		Local $aTransactionsSplit[(UBound($aTransactionSplitIndices))][2] ; dimension array to store all measurements per transaction per script
@@ -259,6 +263,41 @@ Func ExportToGraphite($sMetricPath, $nMin, $nAvg, $nMax, $nPerc, $nTps, $nEpoch)
 		EndIf
 	EndIf
 EndFunc ; ExportToGraphite
+
+Func ZeroWritingGraphite($sTransState, $sScript, $aTransactionList)
+	If $iSocket = Null Then
+		$iSocket = TCPConnect($sGraphiteHost, $nGraphitePort)
+		If $iSocket <= 0 Or @error Then
+			ConsoleWriteError("Error occurred while connecting to Graphite host. Please check hostname/IP adrress and port number." & @CRLF)
+			MsgBox(16, "Error", "Error connecting to Graphite host " & $sGraphiteHost & " on port " & $nGraphitePort, 10)
+			Exit 1
+		EndIf
+	EndIf
+
+	If $sTransState = "passed" Then $sMetricTps = "tpps"
+	If $sTransState = "failed" Then $sMetricTps = "tfps"
+
+	For $i = 1 to $aTransactionList[0]
+		ConsoleWrite('Writing "0" (zero) values for not ' & $sTransState & ' transaction ' & $aTransactionList[$i] & ' in script ' & $sScript & @CRLF)
+		For $nEpoch = $nStartTime to $nEndTime Step 10
+			;ConsoleWrite($nEpoch & ": " & $i & @CRLF)
+			$ret = TCPSend($iSocket, $sGraphiteRootNamespace & "." & StringReplace($sScript, " ", "_") & "." & StringReplace($aTransactionList[$i], " ", "_") & "." & $sMetricTps & " 0" & " " & $nEpoch & @LF)
+			If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " while writing zeroes for transaction " & $aTransactionList[$i] & " of script " & $sScript & @CRLF)
+			If Not @error Then $nPayloadBytes += $ret
+			If $nPayloadBytes > 256000 Then  ; after 250KB use new TCP connection
+				$ret = TCPCloseSocket($iSocket)
+				$iSocket = Null
+				$nPayloadBytes = 0
+				If @error Then
+					ConsoleWriteError("TCPClose errorcode: " & @error & " socket: " & $iSocket & @CRLF)
+					$ret = TCPShutdown()
+					If @error Then ConsoleWriteError("TCPShutdown errorcode: " & @error & " socket: " & $iSocket & @CRLF)
+					Exit 1
+				EndIf
+			EndIf
+		Next
+	Next
+EndFunc ; ZeroWritingGraphite
 
 Func Average($aValues)
 	$nSum = 0
