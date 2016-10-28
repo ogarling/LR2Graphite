@@ -16,37 +16,38 @@
 Global $iEventError = 0
 Local $oMyError = ObjEvent("AutoIt.Error", "ErrFunc") ; install a custom error handler
 
-Const $sIni = StringTrimRight(@ScriptName, 3) & "ini"
 If $CmdLine[0] = 5 Then ; Jenkins mode!
 	$sScenarioPath = $CmdLine[1]
 	$sDashboardName = $CmdLine[2]
 	$sTestrunId = $CmdLine[3]
 	$sBuildResultsUrl = $CmdLine[4]
 	$sRunMode = $CmdLine[5]
-ElseIf $CmdLine[0] = 1 Then ; standalone mode
+ElseIf $CmdLine[0] = 2 Then ; standalone mode
 	$sScenarioPath = $CmdLine[1]
-	$sDashboardName = IniRead($sIni, "targets-io", "DashboardName", "LOAD")
+	$sDashboardName = $CmdLine[2]
 	$sTestrunId = "LOADRUNNER-" & StringReplace(_DateTimeFormat(_NowCalc(), 2), "/", "-") & "-" & Random(1, 99999, 1)
 	$sBuildResultsUrl = ""
 	$sRunMode = "standalone"
 Else ; invalid amount of command line  parameters entered
-	ConsoleWriteError("Please provide one or five command line parameter(s):" & @CRLF & @CRLF)
-	ConsoleWriteError("LRlauncher.exe <path to scenario file>" & @CRLF & @CRLF & "or Jenkins mode:" & @CRLF)
+	ConsoleWriteError("Please provide two or five command line parameter(s):" & @CRLF & @CRLF)
+	ConsoleWriteError("LRlauncher.exe <path to scenario file> <DashboardName>" & @CRLF & @CRLF & "or Jenkins mode:" & @CRLF)
 	ConsoleWriteError("LRlauncher.exe <path to scenario file> <DashboardName> <TestrunId> <BuildResultsUrl> <standalone|parallel>" & @CRLF & @CRLF)
-	ConsoleWriteError("Please note: to be used script directories must be present in working directory from where LRlauncher is executed." & @CRLF)
+	ConsoleWriteError("Please note: to be used LoadRunner scenario, the LoadRunner script directories and LRlauncher helper files should all be present in the same, current working directory or residing in a subdirectory." & @CRLF & @CRLF)
 	Exit 1
 EndIf
 
-$sLRpath = IniRead($sIni, "LoadRunner", "LRpath", "C:\Program Files (x86)\HP\LoadRunner\bin\wlrun.exe")
-$nTimeout = IniRead($sIni, "LoadRunner", "TimeoutDefault", "90")
-$sHost = IniRead($sIni, "targets-io", "Host", "targets-io.klm.com")
-$nPort = IniRead($sIni, "targets-io", "Port", "10003")
-$sGraphiteHost = IniRead($sIni, "Graphite", "GraphiteHost", "172.21.42.178")
-$nGraphitePort = IniRead($sIni, "Graphite", "GraphitePort", "2113")
-$sProductName = IniRead($sIni, "targets-io", "ProductName", "LOADRUNNER")
-$sProductRelease = IniRead($sIni, "targets-io", "ProductRelease", "1.0")
-$nRampupPeriod = IniRead($sIni, "targets-io", "RampupPeriod", "10")
-$nTimeZoneOffset = IniRead($sIni, "LR2Graphite", "TimeZoneOffset", "-1")
+Global $sScenarioPathPrefix = DeterminePathPrefix($sScenarioPath)
+$sIni = StringTrimRight(@ScriptName, 3) & "ini"
+$sLRpath = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "LoadRunner", "LRpath", "C:\Program Files (x86)\HP\LoadRunner\bin\wlrun.exe")
+$nTimeout = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "LoadRunner", "TimeoutDefault", "90")
+$sHost = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "targets-io", "Host", "targets-io.klm.com")
+$nPort = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "targets-io", "Port", "10003")
+$sGraphiteHost = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "Graphite", "GraphiteHost", "172.21.42.178")
+$nGraphitePort = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "Graphite", "GraphitePort", "2113")
+$sProductName = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "targets-io", "ProductName", "LOADRUNNER")
+$sProductRelease = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "targets-io", "ProductRelease", "1.0")
+$nRampupPeriod = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "targets-io", "RampupPeriod", "10")
+$nTimeZoneOffset = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "LR2Graphite", "TimeZoneOffset", "-1")
 
 If Not LrsScriptPaths($sScenarioPath) Then
 	ConsoleWriteError("Something went wrong while patching script paths in scenario file " & $sScenarioPath & @CRLF & "Now exiting." & @CRLF)
@@ -56,9 +57,9 @@ Else
 EndIf
 
 ; check if old LRA dir exists and if so, rename it to .old
-If FileExists(@WorkingDir & "\LRR\LRA") Then
-	If Not DirMove(@WorkingDir & "\LRR\LRA", @WorkingDir & "\LRR\LRA.old", 1) Then
-		ConsoleWriteError("Old analysis directory detected and unable rename to " & @WorkingDir & "\LRR\LRA.old" & @CRLF & "Locked?" & @CRLF)
+If FileExists(@WorkingDir & $sScenarioPathPrefix & "LRR\LRA") Then
+	If Not DirMove(@WorkingDir & $sScenarioPathPrefix & "LRR\LRA", @WorkingDir & $sScenarioPathPrefix & "LRR\LRA.old", 1) Then
+		ConsoleWriteError("Old analysis directory detected and unable rename to " & @WorkingDir & $sScenarioPathPrefix & "LRR\LRA.old" & @CRLF & "Locked?" & @CRLF)
 		Exit 1
 	EndIf
 EndIf
@@ -83,7 +84,7 @@ If ProcessExists("wlrun.exe") Then
 EndIf
 If WinExists("HP LoadRunner Controller") Then WinClose("HP LoadRunner Controller")
 ConsoleWrite("Running of LoadRunner scenario started." & @CRLF)
-$iPid = Run($sLRpath & ' -Run -InvokeAnalysis -TestPath "' & $sScenarioPath & '" -ResultName "' & @WorkingDir & '\LRR"')
+$iPid = Run($sLRpath & ' -Run -InvokeAnalysis -TestPath "' & $sScenarioPath & '" -ResultName "' & @WorkingDir & $sScenarioPathPrefix & 'LRR"')
 If $iPid = 0 Or @error Then
 	ConsoleWriteError("Something went wrong starting the scenario file with LoadRunner. Now exiting." & @CRLF)
 	Exit 1
@@ -91,7 +92,7 @@ EndIf
 
 ; wait until timeout
 $sTestStart = _NowCalc()
-ConsoleWrite("Sending keepalive events to targets-io during test: ")
+If $sRunMode <> "parallel" Then ConsoleWrite("Sending keepalive events to targets-io during test: ")
 While _DateDiff("s", $sTestStart, _NowCalc()) < $nTimeout * 60
 	Sleep(15000) ; keepalive interval 15sec by default
 	If $sRunMode <> "parallel" Then
@@ -122,7 +123,7 @@ EndIf
 
 ; check if results and analysis are properly executed and LoadRunner processes are closed
 Sleep(2000) ; give analysis tool time to start
-If Not FileExists(@WorkingDir & "\LRR\LRA\LRA.mdb") Then
+If Not FileExists(@WorkingDir & $sScenarioPathPrefix & "LRR\LRA\LRA.mdb") Then
 	ConsoleWriteError("Error: LoadRunner Access database is not present. Remaining LoadRunner processes will be closed." & @CRLF)
 	Exit 1
 Else
@@ -144,12 +145,12 @@ If ProcessExists("AnalysisUI.exe") Then
 EndIf
 
 ; launching LR2Graphite
-If Not FileExists(@WorkingDir & "\LR2Graphite.exe") Then
+If Not FileExists(@WorkingDir & $sScenarioPathPrefix & "LR2Graphite.exe") Then
 	ConsoleWriteError("Unable to proceed: file LR2Graphite.exe not found in working directory " & @WorkingDir & @CRLF)
 	Exit 1
 EndIf
 ConsoleWrite("Launching LR2Graphite." & @CRLF)
-$ret = RunWait(@WorkingDir & '\LR2Graphite.exe "' & @WorkingDir & '\LRR\LRA\LRA.mdb" ' & $sGraphiteHost & ' ' & $nGraphitePort & ' ' & $nTimeZoneOffset)
+$ret = RunWait(@WorkingDir & $sScenarioPathPrefix & 'LR2Graphite.exe "' & @WorkingDir & $sScenarioPathPrefix & 'LRR\LRA\LRA.mdb" ' & $sGraphiteHost & ' ' & $nGraphitePort & ' ' & $nTimeZoneOffset)
 If $ret <> 0 Or @error Then
 	ConsoleWriteError("Something went wrong during LR2Graphite execution. Now exiting." & @CRLF)
 	Exit 2 ; errorlevel 2 = LR2Graphite
@@ -209,6 +210,11 @@ Func SendJSONRunningTest($sEvent, $sProductName, $sDashboardName, $sTestrunId, $
 	Return True
 EndFunc   ;==>SendJSONRunningTest
 
+Func DeterminePathPrefix($sPath)
+	$aPath = StringSplit($sPath, "\")
+	Return "\" & StringTrimRight($sPath, StringLen($aPath[$aPath[0]]))
+EndFunc	;==>DeterminePathPrefix
+
 Func LrsScriptPaths($sFile)
 	$hFile = FileOpen($sFile, 0)
 	If $hFile = -1 Then
@@ -226,13 +232,13 @@ Func LrsScriptPaths($sFile)
 		If @error = -1 Then ExitLoop ; when EOF is reached
 		If StringRight($sLine, 3) = "usr" Then
 			$aPath = StringSplit($sLine, "\")
-			If Not FileExists(@WorkingDir & "\" & $aPath[$aPath[0] - 1] & "\" & $aPath[$aPath[0]]) Then
-				ConsoleWriteError("Error: script found in scenario file " & $sFile & " does not exist in location: " & @WorkingDir & "\" & $aPath[$aPath[0] - 1] & "\" & $aPath[$aPath[0]] & @CRLF)
+			If Not FileExists(@WorkingDir & $sScenarioPathPrefix & $aPath[$aPath[0] - 1] & "\" & $aPath[$aPath[0]]) Then
+				ConsoleWriteError("Error: script found in scenario file " & $sFile & " does not exist in location: " & @WorkingDir & $sScenarioPathPrefix & $aPath[$aPath[0] - 1] & "\" & $aPath[$aPath[0]] & @CRLF)
 				FileClose($hFile)
 				FileClose($hFileTmp)
 				Return False
 			EndIf
-			FileWriteLine($hFileTmp, "Path=" & @WorkingDir & "\" & $aPath[$aPath[0] - 1] & "\" & $aPath[$aPath[0]])
+			FileWriteLine($hFileTmp, "Path=" & @WorkingDir & $sScenarioPathPrefix & $aPath[$aPath[0] - 1] & "\" & $aPath[$aPath[0]])
 		Else
 			FileWriteLine($hFileTmp, $sLine)
 		EndIf
@@ -267,11 +273,8 @@ Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
 	EndIf
 
 	$aBenchmarkResultPreviousOK = _StringBetween($sReceived, '"benchmarkResultPreviousOK":', ',')
-;~ 	ConsoleWrite("prev: " & $aBenchmarkResultPreviousOK[0] & @CRLF)
 	$aBenchmarkResultFixedOK = _StringBetween($sReceived, '"benchmarkResultFixedOK":', ',')
-;~ 	ConsoleWrite("fixed: " & $aBenchmarkResultFixedOK[0] & @CRLF)
 	$aMeetsRequirement = _StringBetween($sReceived, '"meetsRequirement":', ',')
-;~ 	ConsoleWrite("req: " & $aMeetsRequirement[0] & @CRLF)
 
 	If $aBenchmarkResultPreviousOK[0] = "false" Or $aBenchmarkResultFixedOK[0] = "false" Or $aMeetsRequirement[0] = "false" Then
 		If $aMeetsRequirement[0] = "false" Then $sReturn = "Requirements not met: " & "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/#!/requirements/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId) & "/failed/" & @CRLF
