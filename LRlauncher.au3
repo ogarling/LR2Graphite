@@ -218,7 +218,8 @@ EndFunc	;==>DeterminePathPrefix
 Func LrsScriptPaths($sFile)
 	$hFile = FileOpen($sFile, 0)
 	If $hFile = -1 Then
-		ConsoleWriteError("Unable to open scenario file." & @CRLF)
+		ConsoleWriteError("Unable to open scenario file " & $sFile & @CRLF)
+		If Not FileExists($sFile) Then ConsoleWriteError("File does not exist (please check for typo)." & @CRLF)
 		Return False
 	EndIf
 	$hFileTmp = FileOpen($sFile & ".tmp", 2)
