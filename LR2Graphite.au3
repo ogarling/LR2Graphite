@@ -214,7 +214,7 @@ EndFunc		; PlaceInBucket
 Func ProcessBuckets ($aBuckets, ByRef $sTransactionName, ByRef $sScript)
 	ConsoleWrite(UBound($aBuckets) & " buckets to process" & @CRLF)
 	For $i = 0 to UBound($aBuckets) - 1
-		If IsArray($aBuckets[$i]) Then ExportToGraphite($sGraphiteRootNamespace & "." & StringReplace($sScript, " ", "_") & "." & StringReplace($sTransactionName, " ", "_"), _ArrayMin($aBuckets[$i]), Average($aBuckets[$i]), _ArrayMax($aBuckets[$i]), Percentile($aBuckets[$i], $nPercentile), UBound($aBuckets[$i]) / $nGraphiteResolution, $nStartTime + (($i + 1) * $nGraphiteResolution))
+		If IsArray($aBuckets[$i]) Then ExportToGraphite($sGraphiteRootNamespace & "." & StringReplace($sScript, " ", "_") & "." & StringReplace($sTransactionName, " ", "_"), _ArrayMin($aBuckets[$i]), Average($aBuckets[$i]), _ArrayMax($aBuckets[$i]), Percentile($aBuckets[$i], $nPercentile), UBound($aBuckets[$i]), $nStartTime + (($i + 1) * $nGraphiteResolution))
 	Next
 	Return True
 EndFunc
@@ -223,7 +223,7 @@ Func ExportToGraphite($sMetricPath, $nMin, $nAvg, $nMax, $nPerc, $nTps, $nEpoch)
 	If $iSocket = Null Then
 		$iSocket = TCPConnect($sGraphiteHost, $nGraphitePort)
 		If $iSocket <= 0 Or @error Then
-			ConsoleWriteError("Error occurred while connecting to Graphite host. Please check hostname/IP adrress and port number." & @CRLF)
+			ConsoleWriteError("Error occurred while connecting to Graphite host. Please check hostname/IP address and port number." & @CRLF)
 			MsgBox(16, "Error", "Error connecting to Graphite host " & $sGraphiteHost & " on port " & $nGraphitePort, 10)
 			Exit 1
 		EndIf
