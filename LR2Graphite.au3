@@ -251,7 +251,7 @@ Func ExportToGraphite($sMetricPath, $nMin, $nAvg, $nMax, $nPerc, $nTps, $nEpoch)
 		If Not @error Then $nPayloadBytes += $ret
 	EndIf
 
-	If $nPayloadBytes > 256000 Then  ; after 250KB use new TCP connection
+	If $nPayloadBytes > 1048576 Then  ; after 1MB use new TCP connection
 		$ret = TCPCloseSocket($iSocket)
 		$iSocket = Null
 		$nPayloadBytes = 0
@@ -284,7 +284,7 @@ Func ZeroWritingGraphite($sTransState, $sScript, $aTransactionList)
 			$ret = TCPSend($iSocket, $sGraphiteRootNamespace & "." & StringReplace($sScript, " ", "_") & "." & StringReplace($aTransactionList[$i], " ", "_") & "." & $sMetricTps & " 0" & " " & $nEpoch & @LF)
 			If @error Then ConsoleWriteError("TCPSend errorcode: " & @error & " while writing zeroes for transaction " & $aTransactionList[$i] & " of script " & $sScript & @CRLF)
 			If Not @error Then $nPayloadBytes += $ret
-			If $nPayloadBytes > 256000 Then  ; after 250KB use new TCP connection
+			If $nPayloadBytes > 1048576 Then  ; after 1MB use new TCP connection
 				$ret = TCPCloseSocket($iSocket)
 				$iSocket = Null
 				$nPayloadBytes = 0
@@ -292,6 +292,12 @@ Func ZeroWritingGraphite($sTransState, $sScript, $aTransactionList)
 					ConsoleWriteError("TCPClose errorcode: " & @error & " socket: " & $iSocket & @CRLF)
 					$ret = TCPShutdown()
 					If @error Then ConsoleWriteError("TCPShutdown errorcode: " & @error & " socket: " & $iSocket & @CRLF)
+					Exit 1
+				EndIf
+				$iSocket = TCPConnect($sGraphiteHost, $nGraphitePort)
+				If $iSocket <= 0 Or @error Then
+					ConsoleWriteError("Error occurred while connecting to Graphite host. Please check hostname/IP adrress and port number." & @CRLF)
+					MsgBox(16, "Error", "Error connecting to Graphite host " & $sGraphiteHost & " on port " & $nGraphitePort, 10)
 					Exit 1
 				EndIf
 			EndIf
