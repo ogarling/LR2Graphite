@@ -214,7 +214,7 @@ EndFunc		; PlaceInBucket
 Func ProcessBuckets ($aBuckets, ByRef $sTransactionName, ByRef $sScript)
 	ConsoleWrite(UBound($aBuckets) & " buckets to process" & @CRLF)
 	For $i = 0 to UBound($aBuckets) - 1
-		If IsArray($aBuckets[$i]) Then ExportToGraphite($sGraphiteRootNamespace & "." & StringReplace($sScript, " ", "_") & "." & StringReplace($sTransactionName, " ", "_"), _ArrayMin($aBuckets[$i]), Average($aBuckets[$i]), _ArrayMax($aBuckets[$i]), Percentile($aBuckets[$i], $nPercentile), UBound($aBuckets[$i]), $nStartTime + (($i + 1) * $nGraphiteResolution))
+		If IsArray($aBuckets[$i]) Then ExportToGraphite($sGraphiteRootNamespace & "." & StringReplace($sScript, " ", "_") & "." & StringReplace($sTransactionName, " ", "_"), _ArrayMin($aBuckets[$i]), Average($aBuckets[$i]), _ArrayMax($aBuckets[$i]), Percentile($aBuckets[$i], $nPercentile), UBound($aBuckets[$i]) / $nGraphiteResolution, $nStartTime + (($i + 1) * $nGraphiteResolution))
 	Next
 	Return True
 EndFunc
