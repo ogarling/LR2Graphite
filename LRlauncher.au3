@@ -17,10 +17,6 @@
 Global $aIEproxy = _WinHttpGetIEProxyConfigForCurrentUser()
 Global $sProxy = $aIEproxy[2]
 
-Global $iEventError = 0
-Local $oMyError = ObjEvent("AutoIt.Error", "ErrFunc") ; install a custom error handler
-
-
 If $CmdLine[0] = 5 Then ; Jenkins mode!
 	$sScenarioPath = $CmdLine[1]
 	$sDashboardName = $CmdLine[2]
@@ -47,12 +43,19 @@ $sLRpath = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "LoadRunner", "LR
 $nTimeout = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "LoadRunner", "TimeoutDefault", "90")
 $sHost = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "targets-io", "Host", "targets-io.klm.com")
 $nPort = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "targets-io", "Port", "10003")
+$nUseSSL = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "targets-io", "UseSSL", "1")
 $sGraphiteHost = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "Graphite", "GraphiteHost", "172.21.42.178")
 $nGraphitePort = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "Graphite", "GraphitePort", "2113")
 $sProductName = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "targets-io", "ProductName", "LOADRUNNER")
 $sProductRelease = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "targets-io", "ProductRelease", "1.0")
 $nRampupPeriod = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "targets-io", "RampupPeriod", "10")
 $nTimeZoneOffset = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "LR2Graphite", "TimeZoneOffset", "-1")
+
+If $nUseSSL = 1 Then
+	Global $sProtocol = "https://"
+Else
+	$sProtocol = "http://"
+EndIf
 
 If Not LrsScriptPaths($sScenarioPath) Then
 	ConsoleWriteError("Something went wrong while patching script paths in scenario file " & $sScenarioPath & @CRLF & "Now exiting." & @CRLF)
@@ -71,9 +74,10 @@ EndIf
 
 ; send start event to targets-io when run mode is not parallel
 If $sRunMode <> "parallel" Then
-	ConsoleWrite("Sending start event to targets-io: ")
+	ConsoleWrite("Sending start event to targets-io using " & $sHost & ":" & $nPort & " ... ")
 	If Not SendJSONRunningTest("start", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod) Then
 		ConsoleWriteError("Sending end event unsuccessful: test will have status incompleted in targets-io." & @CRLF)
+		Exit 1
 	Else
 		ConsoleWrite("successful" & @CRLF)
 	EndIf
@@ -190,14 +194,23 @@ Func SendJSONRunningTest($sEvent, $sProductName, $sDashboardName, $sTestrunId, $
 	$hOpen = _WinHttpOpen("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0", $WINHTTP_ACCESS_TYPE_NAMED_PROXY, $sProxy)
 
 	; Get connection handle
-	$hConnect = _WinHttpConnect($hOpen, $sHost & ":" & $nPort)
+	$hConnect = _WinHttpConnect($hOpen, $sHost, $nPort)
 
-	$sReturned = _WinHttpSimpleSSLRequest($hConnect, "POST", "/running-test/" & $sEvent, Default, '{"testRunId": "' & $sTestrunId & '", ' & _
-			'"dashboardName": "' & $sDashboardName & '", ' & _
-			'"productName": "' & $sProductName & '", ' & _
-			'"buildResultsUrl": "' & $sBuildResultsUrl & '", ' & _
-			'"productRelease": "' & $sProductRelease & '", ' & _
-			'"rampUpPeriod": "' & $nRampupPeriod & '"}', "Content-Type: application/json" & @CR & "Cache-Control: no-cache" & @CR & "Connection: close")
+	If $nUseSSL = 1 Then
+		$sReturned = _WinHttpSimpleSSLRequest($hConnect, "POST", "/running-test/" & $sEvent, Default, '{"testRunId": "' & $sTestrunId & '", ' & _
+				'"dashboardName": "' & $sDashboardName & '", ' & _
+				'"productName": "' & $sProductName & '", ' & _
+				'"buildResultsUrl": "' & $sBuildResultsUrl & '", ' & _
+				'"productRelease": "' & $sProductRelease & '", ' & _
+				'"rampUpPeriod": "' & $nRampupPeriod & '"}', "Content-Type: application/json" & @CR & "Cache-Control: no-cache" & @CR & "Connection: close")
+	Else
+		$sReturned = _WinHttpSimpleRequest($hConnect, "POST", "/running-test/" & $sEvent, Default, '{"testRunId": "' & $sTestrunId & '", ' & _
+				'"dashboardName": "' & $sDashboardName & '", ' & _
+				'"productName": "' & $sProductName & '", ' & _
+				'"buildResultsUrl": "' & $sBuildResultsUrl & '", ' & _
+				'"productRelease": "' & $sProductRelease & '", ' & _
+				'"rampUpPeriod": "' & $nRampupPeriod & '"}', "Content-Type: application/json" & @CR & "Cache-Control: no-cache" & @CR & "Connection: close")
+	EndIf
 
 	If @error Then
 		_WinHttpCloseHandle($hConnect)
@@ -267,7 +280,11 @@ Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
 	; Get connection handle
 	$hConnect = _WinHttpConnect($hOpen, $sHost, $nPort)
 
-	$sReceived = _WinHttpSimpleSSLRequest($hConnect, "GET", "/testrun/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId), Default, Default , "Content-Type: application/json" & @CR & "Cache-Control: no-cache" & @CR & "Connection: close")
+	If $nUseSSL = 1 Then
+		$sReceived = _WinHttpSimpleSSLRequest($hConnect, "GET", "/testrun/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId), Default, Default , "Content-Type: application/json" & @CR & "Cache-Control: no-cache" & @CR & "Connection: close")
+	Else
+		$sReceived = _WinHttpSimpleRequest($hConnect, "GET", "/testrun/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId), Default, Default , "Content-Type: application/json" & @CR & "Cache-Control: no-cache" & @CR & "Connection: close")
+	EndIf
 
 	If @error Then
  		ConsoleWriteError("Assertions request went wrong with error code: " & @error & @CRLF)
@@ -279,18 +296,12 @@ Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
 	$aMeetsRequirement = _StringBetween($sReceived, '"meetsRequirement":', ',')
 
 	If $aBenchmarkResultPreviousOK[0] = "false" Or $aBenchmarkResultFixedOK[0] = "false" Or $aMeetsRequirement[0] = "false" Then
-		If $aMeetsRequirement[0] = "false" Then $sReturn = "Requirements not met: " & "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/#!/requirements/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId) & "/failed/" & @CRLF
-		If $aBenchmarkResultPreviousOK[0] = "false" Then $sReturn += "Benchmark with previous test result failed: " & "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/#!/benchmark-previous-build/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId) & "/failed/" & @CRLF
-		If $aBenchmarkResultFixedOK[0] = "false" Then $sReturn += "Benchmark with fixed baseline failed: " & "http://" & $sGraphiteHost & ":" & $nGraphitePort & "/#!/benchmark-fixed-baseline/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId) & "/failed/" & @CRLF
+		If $aMeetsRequirement[0] = "false" Then $sReturn = "Requirements not met: " & $sProtocol & $sHost & ":" & $nPort & "/#!/requirements/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId) & "/failed/" & @CRLF
+		If $aBenchmarkResultPreviousOK[0] = "false" Then $sReturn += "Benchmark with previous test result failed: " & $sProtocol & $sHost & ":" & $nPort & "/#!/benchmark-previous-build/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId) & "/failed/" & @CRLF
+		If $aBenchmarkResultFixedOK[0] = "false" Then $sReturn += "Benchmark with fixed baseline failed: " & $sProtocol & $sHost & ":" & $nPort & "/#!/benchmark-fixed-baseline/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId) & "/failed/" & @CRLF
 		ConsoleWrite($sReturn)
 		Return False
 	Else
 		Return True
 	EndIf
 EndFunc   ;==>AssertionRequest
-
-; This is a custom error handler
-Func ErrFunc()
-	ConsoleWriteError("Error trying to send a Targets-io event: " & $oMyError.description)
-    $iEventError = 1 ; Use to check when a COM Error occurs
-EndFunc   ;==>ErrFunc
