@@ -302,6 +302,7 @@ Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
 		ConsoleWrite($sReturn)
 		Return False
 	Else
+		ConsoleWrite("Assertions passed." & @CRLF)
 		Return True
 	EndIf
 EndFunc   ;==>AssertionRequest
