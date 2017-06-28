@@ -12,9 +12,14 @@
 #include <Date.au3>
 #include <Array.au3>
 #include <String.au3>
+#include <WinHttp.au3>
+
+Global $aIEproxy = _WinHttpGetIEProxyConfigForCurrentUser()
+Global $sProxy = $aIEproxy[2]
 
 Global $iEventError = 0
 Local $oMyError = ObjEvent("AutoIt.Error", "ErrFunc") ; install a custom error handler
+
 
 If $CmdLine[0] = 5 Then ; Jenkins mode!
 	$sScenarioPath = $CmdLine[1]
@@ -181,31 +186,29 @@ If $sRunMode <> "parallel" Then
 EndIf
 
 Func SendJSONRunningTest($sEvent, $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod)
-	; Creating the object
-	$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
-	$oHTTP.SetTimeouts(30 * 1000, 240 * 1000, 30 * 1000, 30 * 1000)
-	$oHTTP.Open("POST", "http://" & $sHost & ":" & $nPort & "/running-test/" & $sEvent, False)
-	$oHTTP.SetRequestHeader("Content-Type", "application/json")
-	$oHTTP.SetRequestHeader("Cache-Control", "no-cache")
+	; Initialize and get session handle
+	$hOpen = _WinHttpOpen("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0", $WINHTTP_ACCESS_TYPE_NAMED_PROXY, $sProxy)
 
-	$oHTTP.Send('{"testRunId": "' & $sTestrunId & '", ' & _
+	; Get connection handle
+	$hConnect = _WinHttpConnect($hOpen, $sHost & ":" & $nPort)
+
+	$sReturned = _WinHttpSimpleSSLRequest($hConnect, "POST", "/running-test/" & $sEvent, Default, '{"testRunId": "' & $sTestrunId & '", ' & _
 			'"dashboardName": "' & $sDashboardName & '", ' & _
 			'"productName": "' & $sProductName & '", ' & _
 			'"buildResultsUrl": "' & $sBuildResultsUrl & '", ' & _
 			'"productRelease": "' & $sProductRelease & '", ' & _
-			'"rampUpPeriod": "' & $nRampupPeriod & '"}')
+			'"rampUpPeriod": "' & $nRampupPeriod & '"}', "Content-Type: application/json" & @CR & "Cache-Control: no-cache" & @CR & "Connection: close")
 
-	If Not $iEventError Then
-		; download the body response if any, and get the server status response code.
-		$oReceived = $oHTTP.ResponseText
-		$oStatusCode = $oHTTP.Status
-		If $oStatusCode <> 200 Then
-			ConsoleWriteError("Targets-io event response status code not 200 OK, but " & $oStatusCode & @CRLF & "Response body: " & @CRLF & $oReceived & @CRLF)
-			Return False
-		EndIf
-	Else
-		$iEventError = 0 ; reset after displaying a COM Error occurred
+	If @error Then
+		_WinHttpCloseHandle($hConnect)
+		_WinHttpCloseHandle($hOpen)
+ 		ConsoleWriteError("Targets-io event went wrong with error code: " & @error & @CRLF)
+		Return False
 	EndIf
+
+	; Close handles
+	_WinHttpCloseHandle($hConnect)
+	_WinHttpCloseHandle($hOpen)
 
 	Return True
 EndFunc   ;==>SendJSONRunningTest
@@ -258,18 +261,16 @@ Func LrsScriptPaths($sFile)
 EndFunc   ;==>LrsScriptPaths
 
 Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
-	; Creating the object
-	$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
-	$oHTTP.SetTimeouts(30 * 1000, 240 * 1000, 30 * 1000, 30 * 1000)
-	$oHTTP.Open("GET", "http://" & $sHost & ":" & $nPort & "/testrun/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId), False)
-	$oHTTP.SetRequestHeader("Content-Type", "application/json")
-	$oHTTP.SetRequestHeader("Cache-Control", "no-cache")
-	$oHTTP.Send()
-	$sReceived = $oHTTP.ResponseText
-	$nStatusCode = $oHTTP.Status
+	; Initialize and get session handle
+	$hOpen = _WinHttpOpen("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0", $WINHTTP_ACCESS_TYPE_NAMED_PROXY, $sProxy)
 
-	If $nStatusCode <> 200 Then
-		ConsoleWriteError("Targets-io response status code not 200 OK, but " & $nStatusCode & @CRLF & "Response body: " & @CRLF & $sReceived)
+	; Get connection handle
+	$hConnect = _WinHttpConnect($hOpen, $sHost, $nPort)
+
+	$sReceived = _WinHttpSimpleSSLRequest($hConnect, "GET", "/testrun/" & StringUpper($sProductName) & "/" & StringUpper($sDashboardName) & "/" & StringUpper($sTestrunId), Default, Default , "Content-Type: application/json" & @CR & "Cache-Control: no-cache" & @CR & "Connection: close")
+
+	If @error Then
+ 		ConsoleWriteError("Assertions request went wrong with error code: " & @error & @CRLF)
 		SetError(1, 0, "Assertion request failed.")
 	EndIf
 
