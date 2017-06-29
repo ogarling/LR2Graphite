@@ -44,6 +44,7 @@ $nTimeout = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "LoadRunner", "T
 $sHost = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "targets-io", "Host", "targets-io.klm.com")
 $nPort = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "targets-io", "Port", "10003")
 $nUseSSL = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "targets-io", "UseSSL", "1")
+$nUseProxy = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "targets-io", "UseProxy", "0")
 $sGraphiteHost = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "Graphite", "GraphiteHost", "172.21.42.178")
 $nGraphitePort = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "Graphite", "GraphitePort", "2113")
 $sProductName = IniRead(@WorkingDir & $sScenarioPathPrefix & $sIni, "targets-io", "ProductName", "LOADRUNNER")
@@ -191,7 +192,11 @@ EndIf
 
 Func SendJSONRunningTest($sEvent, $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod)
 	; Initialize and get session handle
-	$hOpen = _WinHttpOpen("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0", $WINHTTP_ACCESS_TYPE_NAMED_PROXY, $sProxy)
+	If $nUseProxy = 1 Then
+		$hOpen = _WinHttpOpen("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0", $WINHTTP_ACCESS_TYPE_NAMED_PROXY, $sProxy)
+	Else
+		$hOpen = _WinHttpOpen("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0")
+	EndIf
 
 	; Get connection handle
 	$hConnect = _WinHttpConnect($hOpen, $sHost, $nPort)
@@ -275,7 +280,11 @@ EndFunc   ;==>LrsScriptPaths
 
 Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
 	; Initialize and get session handle
-	$hOpen = _WinHttpOpen("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0", $WINHTTP_ACCESS_TYPE_NAMED_PROXY, $sProxy)
+	If $nUseProxy = 1 Then
+		$hOpen = _WinHttpOpen("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0", $WINHTTP_ACCESS_TYPE_NAMED_PROXY, $sProxy)
+	Else
+		$hOpen = _WinHttpOpen("Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0")
+	EndIf
 
 	; Get connection handle
 	$hConnect = _WinHttpConnect($hOpen, $sHost, $nPort)
@@ -287,9 +296,15 @@ Func AssertionRequest($sProductName, $sDashboardName, $sTestrunId)
 	EndIf
 
 	If @error Then
+		_WinHttpCloseHandle($hConnect)
+		_WinHttpCloseHandle($hOpen)
  		ConsoleWriteError("Assertions request went wrong with error code: " & @error & @CRLF)
 		SetError(1, 0, "Assertion request failed.")
 	EndIf
+
+	; Close handles
+	_WinHttpCloseHandle($hConnect)
+	_WinHttpCloseHandle($hOpen)
 
 	$aBenchmarkResultPreviousOK = _StringBetween($sReceived, '"benchmarkResultPreviousOK":', ',')
 	$aBenchmarkResultFixedOK = _StringBetween($sReceived, '"benchmarkResultFixedOK":', ',')
