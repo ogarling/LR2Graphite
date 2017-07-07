@@ -1,9 +1,0 @@
--+
--DCCI
--D_IDA_XL
--DWINNT
--IC:\scripts\J
--IC:\Program Files (x86)\HP\LoadRunner\include
--ec:\scripts\j\\logfile.log
-c:\scripts\j\\combined_J.c
-c:\scripts\j\\pre_cci.c
