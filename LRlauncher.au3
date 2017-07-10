@@ -155,12 +155,12 @@ If ProcessExists("AnalysisUI.exe") Then
 EndIf
 
 ; launching LR2Graphite
-If Not FileExists(@WorkingDir & $sScenarioPathPrefix & "LR2Graphite.exe") Then
+If Not FileExists(@WorkingDir & $sScenarioPathPrefix & "LR2Graphite\LR2Graphite.exe") Then
 	ConsoleWriteError("Unable to proceed: file LR2Graphite.exe not found in working directory " & @WorkingDir & @CRLF)
 	Exit 1
 EndIf
 ConsoleWrite("Launching LR2Graphite." & @CRLF)
-$ret = RunWait(@WorkingDir & $sScenarioPathPrefix & 'LR2Graphite.exe "' & @WorkingDir & $sScenarioPathPrefix & 'LRR\LRA\LRA.mdb" ' & $sGraphiteHost & ' ' & $nGraphitePort & ' ' & $nTimeZoneOffset)
+$ret = RunWait(@WorkingDir & $sScenarioPathPrefix & 'LR2Graphite\LR2Graphite.exe "' & @WorkingDir & $sScenarioPathPrefix & 'LRR\LRA\LRA.mdb" ' & $sGraphiteHost & ' ' & $nGraphitePort & ' ' & $nTimeZoneOffset)
 If $ret <> 0 Or @error Then
 	ConsoleWriteError("Something went wrong during LR2Graphite execution. Now exiting." & @CRLF)
 	Exit 2 ; errorlevel 2 = LR2Graphite
