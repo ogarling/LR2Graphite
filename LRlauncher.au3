@@ -77,7 +77,7 @@ EndIf
 If $sRunMode <> "parallel" Then
 	ConsoleWrite("Sending start event to targets-io using " & $sHost & ":" & $nPort & " ... ")
 	If Not SendJSONRunningTest("start", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod) Then
-		ConsoleWriteError("Sending end event unsuccessful: test will have status incompleted in targets-io." & @CRLF)
+		ConsoleWriteError("Sending start event unsuccessful." & @CRLF)
 		Exit 1
 	Else
 		ConsoleWrite("successful" & @CRLF)
