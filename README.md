@@ -1,9 +1,9 @@
 # LR2Graphite
-[LoadRunner](<http://www8.hp.com/nl/nl/software-solutions/loadrunner-load-testing/>) response time metrics export tool to [Graphite](https://graphite.readthedocs.io/en/latest/).
+[LoadRunner](<https://software.microfocus.com/en-us/products/loadrunner-load-testing/overview>) response time metrics export tool to [Graphite](https://graphite.readthedocs.io/en/latest/).
 
 ## Why?
 When using LoadRunner in combination with another load test tool like Gatling, JMeter, etc. it would be nice to unify performance test metrics like response time statistics into a single datasource like Graphite.  
-Works excellent in combination with [Targets-io](https://github.com/dmoll1974/targets-io) tool.
+Works excellent in combination with [Targets-io](https://github.com/dmoll1974/targets-io), a Continuous Performance Testing tool.
 
 ## What?
 By using an [AutoIt](https://www.autoitscript.com/site/) script or executable the LoadRunner analysis MS Access database is being queried and the results are exported into Graphite.
