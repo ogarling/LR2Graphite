@@ -90,7 +90,7 @@ If @error Then
 	TCPShutdown()
 	Exit 1
 EndIf
-$nScripts = UBound($aScriptTable[2])
+$nScripts = UBound($aScriptTable[2]) - 1
 
 ; determine start time of test
 $aStartTime = _ADO_Execute($oConnection, "SELECT * FROM Result", True)
