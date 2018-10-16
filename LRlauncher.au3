@@ -174,6 +174,7 @@ If WinExists("HP LoadRunner Controller") Then WinClose("HP LoadRunner Controller
 If $sRunMode <> "parallel" Then
 	; an extra keepalive to solve timing issue for rare occasions when previous keepalive failed
 	SendJSONRunningTest("keepalive", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod)
+	Sleep(2000) ; give system time to optionally "wake up" product
 	ConsoleWrite("Sending end event to targets-io." & @CRLF)
 	If Not SendJSONRunningTest("end", $sProductName, $sDashboardName, $sTestrunId, $sBuildResultsUrl, $sHost, $nPort, $sProductRelease, $nRampupPeriod) Then
 		ConsoleWriteError("Sending end event unsuccessful: test will have status incompleted in targets-io." & @CRLF)
