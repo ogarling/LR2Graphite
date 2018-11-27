@@ -92,9 +92,12 @@ If @error Then
 EndIf
 $nScripts = UBound($aScriptTable[2]) - 1
 
+If $nScripts = 0 Then $nScripts = 1 ; to counter situations where layout of Scripts table in DB shows only 1 record
+
 ; determine start time of test
 $aStartTime = _ADO_Execute($oConnection, "SELECT * FROM Result", True)
 $nStartTime = ($aStartTime[2])[0][4] + ($nTimeZoneOffset * 3600) ; timezone offset correction
+
 If $nScripts > 1 Then
 	$sText = "scripts"
 Else
