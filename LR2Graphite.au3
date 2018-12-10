@@ -90,9 +90,7 @@ If @error Then
 	TCPShutdown()
 	Exit 1
 EndIf
-$nScripts = UBound($aScriptTable[2]) - 1
-
-If $nScripts = 0 Then $nScripts = 1 ; to counter situations where layout of Scripts table in DB shows only 1 record
+$nScripts = UBound($aScriptTable[2])
 
 ; determine start time of test
 $aStartTime = _ADO_Execute($oConnection, "SELECT * FROM Result", True)
